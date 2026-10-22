@@ -1,60 +1,53 @@
 # Heroic Inspiration Manager
 
-**Version 0.0.1 — initial testing release**
+**Version 0.0.2**
 
-An independent Foundry VTT module for tracking Heroic Inspiration as a managed D&D5e Equipment / Trinket with native Item Uses and a Utility Activity.
+Heroic Inspiration charges managed through a D&D5e Equipment/Trinket, native Item Uses and a Utility Activity.
 
-## Compatibility
+## Supported target configurations
 
-- Foundry VTT **13.351** with D&D5e **5.2.5** (target configuration).
-- Foundry VTT **14.369** with D&D5e **6.0.6** (target configuration).
-- Token Magic FX is **optional**; absence does not disable the item, manager or audio.
+- Foundry VTT 13.351 / D&D5e 5.2.5
+- Foundry VTT 14.369 / D&D5e 6.0.6
 
-This release was source-inspected and statically checked; it has **not** been tested inside a live Foundry installation. Back up your world before installing on an existing campaign.
+Token Magic FX is optional. The module does not depend on the Character Builder.
 
-## Installing
+## Install
 
-Install via the official manifest URL after the GitHub release is published:
+Use the GitHub release manifest, once published:
 
 `https://github.com/hammer-PvP/Heroic-Inspiration-Manager/releases/latest/download/module.json`
 
-For manual installation, place the package contents (including `module.json` at the package root) in `Data/modules/heroic-inspiration-manager/` and enable the module in the World.
+For manual installation, extract the ZIP's contents into:
 
-## First use
+`Data/modules/heroic-inspiration-manager/`
 
-1. As GM, open **Configure Settings → Heroic Inspiration → Settings**.
-2. Set fixed or unlimited accumulation, per-use cost, Long Rest recovery and optional sound/FX.
-3. Open the **Actors** directory and click **Heroic Inspiration**.
-4. Select individual, multiple or all eligible actors, and choose **Apply item**.
-5. Use **Grant**, **Revoke** or **Set exact** for starting balances or migrations.
-6. Equip the item; optionally attune if that rule is enabled.
-7. Use the star on the character sheet or the Item Utility Activity to consume charges and announce usage in chat.
+Enable the module in your World.
 
-### Unlimited accumulation
+## GM setup
 
-Unlimited means **no accumulation cap**, not free/infinite spending. The D&D5e `UsesField` requires a numeric maximum. The module tracks total allocated charges in `uses.max` and total spent charges in `uses.spent`, so **available = max − spent** and grants may increase `max` without a cap. The native Item sheet will display its technical totals. The Manager shows the balance with an unlimited-cap indicator.
+1. Open **Configure Settings → Heroic Inspiration → Settings**.
+2. Choose a fixed maximum or **no accumulation limit**. Configure cost, attunement, rest recovery, and optional audio/FX.
+3. Choose **Save and create/sync items**. This creates absent managed items for Characters and updates existing ones; **Include NPCs** is optional. Existing balances are preserved or capped to a reduced configured maximum.
+4. Open the **Heroic Inspiration Manager** using the Actors Directory button or **Open Manager** from Settings.
+5. Select Characters/NPCs and use **Apply item**, **Grant**, **Revoke**, or **Set exact**.
+6. Characters can consume charges using the native Item Activity or their sheet's Inspiration star.
 
-### Attunement
+The Inspiration star is an alternative use control, not an independent pool. Usage publishes the native Activity message in chat.
 
-D&D5e disables attunement on nonmagical equipment. To make optional native attunement work, enabling **Require Attunement** also marks the managed Trinket as magical (`mgc`). The item has no extra magical bonuses or effects from this property.
+## Notes
 
-### Player protection
+- Unlimited accumulation does **not** mean unlimited free use: available charges are tracked in the native Item Uses fields. The GM may grant additional charges without a configured cap.
+- The module uses an identifying Item flag. A non-managed Item with the same name will not be silently replaced.
+- Players are restricted from editing managed properties through normal interface updates. This is a client-side restriction and does not provide an authoritative server-side security boundary against modified clients.
+- Existing native Inspiration should be migrated deliberately through **Set exact**. A native boolean cannot represent several accumulated charges.
+- Optional FX is temporary, uses the configured preset and duration, and does not touch unrelated token filters.
 
-The module blocks normal player edits to managed item properties while still permitting native Activity consumption and legitimate rest recovery. This is **client-side protection**, not a security boundary against modified client code. GM discretion and Foundry document permissions remain essential.
+## v0.0.2
 
-### Existing inspiration
+- Improved Actor Directory button insertion in V13/V14 and added direct access through Settings.
+- Settings synchronization now creates missing Items and reports created, updated and failed counts.
+- Added explicit NPC inclusion for Settings synchronization; Characters remain the default.
+- Preserved balances on reconciliation and prevented duplicate managed Items.
+- Kept valid Activity consumption available to GMs when direct editing is disabled.
 
-Existing native inspiration should be manually converted by the GM using **Set exact**. External features that toggle the native inspiration flag from false to true can be converted when no managed charge is present. A native boolean cannot reliably signal additional grants while already true; the GM should use Grant in those cases.
-
-### FX & audio
-
-FX/sound run only for successful **GM Grant** actions. Token Magic FX requires a matching installed and enabled module. Effects are temporary and cleaned up using filter IDs specific to each grant. The sound plays once per bulk grant. Missing tokens, sound assets or Token Magic FX do not invalidate a grant.
-
-## Version and release files
-
-- Module ID: `heroic-inspiration-manager`
-- Repository: https://github.com/hammer-PvP/Heroic-Inspiration-Manager
-- Tag: `v0.0.1`
-- Release ZIP: `heroic-inspiration-manager.zip`
-- Release manifest: `module.json`
-
+Repository: https://github.com/hammer-PvP/Heroic-Inspiration-Manager

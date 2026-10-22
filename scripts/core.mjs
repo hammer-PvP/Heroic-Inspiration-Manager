@@ -1,4 +1,4 @@
-/** Heroic Inspiration Manager v0.0.1 — system-agnostic UI, D&D5e-native item uses. */
+/** Heroic Inspiration Manager v0.0.2 — system-agnostic UI, D&D5e-native item uses. */
 export const ID = "heroic-inspiration-manager";
 export const ACTIVITY_ID = "himInspireUse001";
 export const log = (...args) => console.log(`[${ID}]`, ...args);
@@ -58,7 +58,7 @@ function desiredItemData(balance=0) {
       properties:get("attunement") ? ["mgc"] : [],
       uses:{max:String(max),spent,recovery},activities:{[ACTIVITY_ID]:activitySource()},
       description:{value:`<p>${escapeHTML(tr("ItemDescription"))}</p>`}},
-    flags:{[ID]:{managed:true,version:"0.0.1"}}
+    flags:{[ID]:{managed:true,version:"0.0.2"}}
   };
 }
 

@@ -22,3 +22,7 @@
 .him-app footer label{display:flex;gap:6px;align-items:center;}
 .him-app footer input[name="amount"]{width:75px;}
 .him-directory-btn{margin:0 2px;}
+
+/* v0.0.2 Actor Directory action and explicit sync scope. */
+.him-directory-btn {display:block;width:calc(100% - 10px);margin:5px;min-height:30px;cursor:pointer;}
+.him-sync-options {border-top:1px solid var(--him-border);padding-top:8px;}

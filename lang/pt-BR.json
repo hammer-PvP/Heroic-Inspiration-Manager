@@ -32,7 +32,7 @@
     "FXSeconds": "Duração do FX (segundos)",
     "FXMissing": "Token Magic FX não está instalado ou ativo. Instale e ative para liberar esta opção.",
     "Save": "Salvar",
-    "SaveSync": "Salvar e sincronizar itens existentes",
+    "SaveSync": "Salvar e criar/sincronizar itens",
     "SettingsSaved": "Configurações salvas.",
     "Synced": "Itens gerenciados sincronizados.",
     "Installed": "Instalado",
@@ -77,6 +77,10 @@
     "TestSound": "Testar som",
     "TestFX": "Testar FX no token selecionado",
     "SelectToken": "Selecione um token no Canvas para testar o FX.",
-    "SelectSound": "Selecione antes um arquivo de som."
+    "SelectSound": "Selecione antes um arquivo de som.",
+    "OpenManager": "Abrir Gerenciador",
+    "IncludeNPCs": "Incluir também NPCs",
+    "SyncScopeHint": "Por padrão, sincroniza apenas Characters. Marque para incluir NPCs. Os saldos existentes são preservados.",
+    "SyncResult": "Sincronização concluída: {created} criados, {updated} atualizados, {failed} falhas."
   }
 }

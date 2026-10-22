@@ -2,7 +2,7 @@
   "id": "heroic-inspiration-manager",
   "title": "Heroic Inspiration Manager",
   "description": "Managed Heroic Inspiration charges, GM distribution, native Activity use and optional grant effects for D&D5e.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "authors": [
     {
       "name": "hammer-PvP",
@@ -52,6 +52,6 @@
   ],
   "url": "https://github.com/hammer-PvP/Heroic-Inspiration-Manager",
   "manifest": "https://github.com/hammer-PvP/Heroic-Inspiration-Manager/releases/latest/download/module.json",
-  "download": "https://github.com/hammer-PvP/Heroic-Inspiration-Manager/releases/download/v0.0.1/heroic-inspiration-manager.zip",
+  "download": "https://github.com/hammer-PvP/Heroic-Inspiration-Manager/releases/download/v0.0.2/heroic-inspiration-manager.zip",
   "bugs": "https://github.com/hammer-PvP/Heroic-Inspiration-Manager/issues"
 }

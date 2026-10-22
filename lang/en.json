@@ -32,7 +32,7 @@
     "FXSeconds": "FX duration (seconds)",
     "FXMissing": "Token Magic FX is not active or installed. Install and enable it to unlock this option.",
     "Save": "Save",
-    "SaveSync": "Save and sync existing items",
+    "SaveSync": "Save and create/sync items",
     "SettingsSaved": "Settings saved.",
     "Synced": "Managed items synchronized.",
     "Installed": "Installed",
@@ -77,6 +77,10 @@
     "TestSound": "Test sound",
     "TestFX": "Test FX on selected token",
     "SelectToken": "Select a token on the canvas to test FX.",
-    "SelectSound": "Choose a sound file first."
+    "SelectSound": "Choose a sound file first.",
+    "OpenManager": "Open Manager",
+    "IncludeNPCs": "Also include NPCs",
+    "SyncScopeHint": "Characters are synchronized by default. Check this option to include NPCs. Existing balances are preserved.",
+    "SyncResult": "Sync complete: {created} created, {updated} updated, {failed} failed."
   }
 }

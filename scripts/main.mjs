@@ -47,9 +47,15 @@ function itemProtection(item,changes,options,userId){
   }
   const user=game.users.get(userId);
   if(user?.isGM && (options?.himAuthorized || options?.isRest))return;
+  const keys=changeKeys(changes);
+  // A legitimate native Activity must be allowed for both GM and players,
+  // regardless of whether direct item editing is permitted.
+  if(activeUses.has(item.uuid) && keys.length===1 && keys[0]==="system.uses.spent"){
+    const incoming=num(foundry.utils.getProperty(changes,"system.uses.spent") ?? changes["system.uses.spent"]);
+    if(incoming===num(item.system.uses.spent)+chargeCost())return;
+  }
   if(user?.isGM) return get("gmDirectEdit")?undefined:false;
   if(!get("playerProtection"))return;
-  const keys=changeKeys(changes);
   if(!keys.length)return;
   const allowed=new Set(["system.equipped","system.attuned"]);
   if(keys.every(k=>allowed.has(k))){
@@ -57,11 +63,6 @@ function itemProtection(item,changes,options,userId){
       ui.notifications?.warn?.(tr("CombatAttunementBlocked"));return false;
     }
     return;
-  }
-  // Native Activity is permitted to advance spent by the *configured cost* only.
-  if(activeUses.has(item.uuid) && keys.length===1 && keys[0]==="system.uses.spent"){
-    const incoming=num(foundry.utils.getProperty(changes,"system.uses.spent") ?? changes["system.uses.spent"]);
-    if(incoming===num(item.system.uses.spent)+chargeCost())return;
   }
   // The D&D5e long rest pipeline passes isRest=true to embedded item updates.
   if(options?.isRest && keys.length===1 && keys[0]==="system.uses.spent" && get("recovery")!=="none"){
@@ -95,18 +96,78 @@ function bindStar(sheet,html){
   });
 }
 
-function addDirectoryButton(app,html){
+// ActorDirectory is a nested ApplicationV2 tab in Foundry V13/V14. It may
+// render before `ready`, so attach using early hooks AND the already-rendered tab.
+function openManager(){
   if(!game.user.isGM)return;
-  const root=html instanceof HTMLElement?html:html?.[0];
-  if(!root || root.querySelector(".him-directory-btn"))return;
-  const anchor=root.querySelector(".directory-header .header-actions")
-    ||root.querySelector(".directory-header")||root.querySelector("header")||root;
-  const button=document.createElement("button");
-  button.type="button";button.className="him-directory-btn";
-  button.innerHTML=`<i class="fas fa-star"></i> ${tr("Manager")}`;
-  button.addEventListener("click",()=>{manager??=new ManagerWindow();manager.render(true);});
-  anchor.appendChild(button);
+  manager??=new ManagerWindow();
+  return manager.render(true);
 }
+function elementOf(value){
+  return value instanceof HTMLElement ? value : value?.[0] instanceof HTMLElement ? value[0] : null;
+}
+function isActorDirectory(app){
+  return app===game.actors?.directory || app===ui.actors ||
+    app?.tabName==="actors" || app?.options?.id==="actors" ||
+    app?.constructor?.name==="ActorDirectory";
+}
+function addDirectoryButton(root){
+  if(!game.user?.isGM || !root || root.querySelector(".him-directory-btn"))return;
+  // The header is distinct in V13/V14; never inject into a non-Actor tab.
+  const header=root.matches?.(".directory-header") ? root :
+    root.querySelector(".directory-header, [data-part='header'], .directory-header-buttons, .header-actions");
+  const anchor=header || root;
+  const button=document.createElement("button");
+  button.type="button";
+  button.className="him-directory-btn";
+  button.innerHTML=`<i class="fas fa-star"></i> ${tr("Manager")}`;
+  button.addEventListener("click",event=>{event.preventDefault();openManager();});
+  if(header===root)header.append(button);
+  else if(header?.classList?.contains("directory-header") || header?.matches?.("[data-part='header']")){
+    header.insertAdjacentElement("afterend",button);
+  } else anchor.prepend(button);
+}
+function directoryRoots(){
+  const candidates=[game.actors?.directory?.element,ui.actors?.element,
+    document.querySelector("#actors"),document.querySelector("#sidebar-tab-actors"),
+    document.querySelector('.sidebar-tab[data-tab="actors"]')];
+  return [...new Set(candidates.map(elementOf).filter(Boolean))];
+}
+function refreshDirectoryButton(){
+  if(!game.user?.isGM)return;
+  for(const root of directoryRoots())addDirectoryButton(root);
+}
+function directoryRenderHook(app,html){
+  if(!game.user?.isGM)return;
+  if(isActorDirectory(app)){
+    addDirectoryButton(elementOf(html));
+    refreshDirectoryButton();
+  } else if(app?.constructor?.name==="Sidebar") {
+    const root=elementOf(html);
+    for(const child of root?.querySelectorAll?.('#actors, #sidebar-tab-actors, .sidebar-tab[data-tab="actors"]')??[])
+      addDirectoryButton(child);
+  }
+}
+let directoryRefreshQueued=false;
+function observeActorDirectory(){
+  if(!game.user?.isGM)return;
+  refreshDirectoryButton();
+  const target=document.querySelector("#sidebar") || document.body;
+  if(!target)return;
+  const observer=new MutationObserver(()=>{
+    if(directoryRefreshQueued)return;
+    directoryRefreshQueued=true;
+    queueMicrotask(()=>{directoryRefreshQueued=false;refreshDirectoryButton();});
+  });
+  observer.observe(target,{childList:true,subtree:true});
+}
+// Register before the first render, not after the system has reached `ready`.
+Hooks.on("renderActorDirectory",directoryRenderHook);
+Hooks.on("renderActorDirectoryV2",directoryRenderHook);
+Hooks.on("renderApplicationV2",(app,html)=>{
+  directoryRenderHook(app,html);
+  if(app?.actor?.type==="character")bindStar(app,html);
+});
 
 Hooks.once("init",()=>{
   if(game.system.id!=="dnd5e")return;
@@ -116,10 +177,9 @@ Hooks.once("ready",()=>{
   if(game.system.id!=="dnd5e")return;
   const v=game.system.version;
   const expected=foundry.utils.isNewerVersion(v,"6.0.0")?"D&D5e 6.x":"D&D5e 5.2.x";
-  log(`v0.0.1 ready on Foundry ${game.version}, ${expected} (${v}).`);
+  log(`v0.0.2 ready on Foundry ${game.version}, ${expected} (${v}).`);
   installActivityGate();
-  Hooks.on("renderActorDirectory",addDirectoryButton);
-  Hooks.on("renderActorDirectoryV2",addDirectoryButton);
+  observeActorDirectory();
   Hooks.on("renderActorSheetV2",bindStar);
   Hooks.on("renderActorSheet",bindStar);
   Hooks.on("preUpdateItem",itemProtection);
@@ -144,7 +204,5 @@ Hooks.once("ready",()=>{
     } else if(changed===false && charges(item)>0)mirrorInspiration(actor,true).catch(console.warn);
   });
   // Expose a read-only integration point, without replacing the native resource model.
-  game.modules.get(ID).api=Object.freeze({getItem:managedItem,getCharges:(actor)=>charges(managedItem(actor)),openManager:()=>{
-    if(!game.user.isGM)return;manager??=new ManagerWindow();manager.render(true);
-  }});
+  game.modules.get(ID).api=Object.freeze({getItem:managedItem,getCharges:(actor)=>charges(managedItem(actor)),openManager});
 });

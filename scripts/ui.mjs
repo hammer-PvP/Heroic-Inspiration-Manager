@@ -44,10 +44,20 @@ export class SettingsWindow extends HIMWindow {
       ${field("fxSeconds",tr("FXSeconds"),get("fxSeconds"),"number",`min=0.1 max=3600 step=0.1 ${fxOK?"":"disabled"}`)}
       ${fxOK?`<div class="him-row"><button type="button" data-him="testFX">${esc(tr("TestFX"))}</button></div>`:""}
       ${fxOK?"":`<p class="him-help">${esc(tr("FXMissing"))} <a target="_blank" rel="noopener noreferrer" href="https://foundryvtt.com/packages/tokenmagic">Token Magic FX ↗</a></p>`}
-      </div><footer><button type="submit"><i class="fas fa-save"></i> ${esc(tr("Save"))}</button><button type="button" data-him="sync">${esc(tr("SaveSync"))}</button></footer></form>`;
+      </div><section class="him-sync-options">
+      ${toggle("syncNPCs",tr("IncludeNPCs"),false)}
+      <p class="him-help">${esc(tr("SyncScopeHint"))}</p></section>
+      <footer><button type="submit"><i class="fas fa-save"></i> ${esc(tr("Save"))}</button>
+      <button type="button" data-him="sync"><i class="fas fa-box-open"></i> ${esc(tr("SaveSync"))}</button>
+      <button type="button" data-him="openManager"><i class="fas fa-star"></i> ${esc(tr("OpenManager"))}</button></footer></form>`;
   }
   bind(el){
     const form=el.querySelector("form");
+    el.querySelector('[data-him="openManager"]')?.addEventListener("click",()=>{
+      const opener=game.modules.get(ID)?.api?.openManager;
+      if(opener) opener();
+      else new ManagerWindow().render(true);
+    });
     el.querySelector('[data-him="testSound"]')?.addEventListener("click",async()=>{
       const src=form.querySelector('input[name="soundFile"]').value;
       if(!src)return ui.notifications.warn(tr("SelectSound"));
@@ -88,14 +98,29 @@ export class SettingsWindow extends HIMWindow {
         if(["fxPreset","fxSeconds"].includes(key) && !findTMFX())val=get(key);
         await game.settings.set(ID,key,val);
       }
-      ui.notifications.info(tr("SettingsSaved"));
       if(sync){
-        const problems=[];
-        for(const actor of eligibleActors()) {if(!actor.items.some(i=>i.getFlag(ID,"managed")))continue;
-          try{await reconcile(actor);}catch(e){problems.push(e.message);}}
-        if(problems.length)ui.notifications.warn(problems.slice(0,3).join(" | "));
-        else ui.notifications.info(tr("Synced"));
-      }
+        const includeNPCs=form.querySelector('[name="syncNPCs"]').checked;
+        const actors=eligibleActors().filter(actor=>includeNPCs || actor.type==="character");
+        const count={created:0,updated:0,failed:0};
+        const errors=[];
+        for(const actor of actors) {
+          const existed=actor.items.some(item=>item.getFlag(ID,"managed"));
+          try {
+            const item=await reconcile(actor,{create:true});
+            if(item) count[existed?"updated":"created"]++;
+          } catch(err) {
+            count.failed++;
+            console.warn(`[${ID}] Failed to synchronize ${actor.name}`,err);
+            errors.push(`${actor.name}: ${err.message}`);
+          }
+        }
+        const report=tr("SyncResult")
+          .replace("{created}",count.created)
+          .replace("{updated}",count.updated)
+          .replace("{failed}",count.failed);
+        if(count.failed)ui.notifications.warn(`${report}${errors.length?` — ${errors.slice(0,2).join(" | ")}`:""}`);
+        else ui.notifications.info(report);
+      } else ui.notifications.info(tr("SettingsSaved"));
       this.render();
     };
     form.addEventListener("submit",async(e)=>{e.preventDefault();try{await save(false);}catch(err){ui.notifications.error(err.message);}});
@@ -138,7 +163,7 @@ export class ManagerWindow extends HIMWindow {
       if(!actors.length){ui.notifications.warn(tr("NoSelected"));return;}
       if(action==="single"){
         const a=actors[0];
-        const response=await foundry.applications.api.DialogV2.prompt({window:{title:a.name},content:`<p>${esc(tr("SetExact"))} — ${esc(a.name)}</p><input name="saldo" type="number" min="0" step="1" value="${snapshot(a).balance}">`,ok:{label:tr("SetExact"),callback:(e,b,d)=>num(b.form.elements.saldo.value)}});
+        const response=await foundry.applications.api.DialogV2.prompt({window:{title:a.name},content:`<p>${esc(tr("SetExact"))} — ${esc(a.name)}</p><input name="saldo" type="number" min="0" step="1" value="${snapshot(a).balance}">`,ok:{label:tr("SetExact"),callback:(_event,_button,dialog)=>num(dialog.element.querySelector('input[name="saldo"]')?.value)}});
         if(response===null||response===undefined)return;
         try{await adjust(a,"set",response);this.render();}catch(err){ui.notifications.error(err.message);}return;
       }
