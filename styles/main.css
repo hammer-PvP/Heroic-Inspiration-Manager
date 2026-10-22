@@ -1,0 +1,24 @@
+.him-app {--him-border:var(--color-border-light-primary, #777);}
+.him-app .window-content {overflow:auto;}
+.him-app .him-settings-form,.him-app .him-manager{padding:12px 15px;display:flex;flex-direction:column;gap:10px;}
+.him-app h3{font-size:1.07em;letter-spacing:.03em;margin:8px 0 2px;border-bottom:1px solid var(--him-border);}
+.him-app .him-field{display:grid;grid-template-columns:minmax(155px, 40%) 1fr;align-items:center;gap:8px;}
+.him-app input[type="text"],.him-app input[type="number"],.him-app select{width:100%;min-height:30px;}
+.him-app .him-checkbox{display:flex;gap:10px;align-items:center;}
+.him-app .him-disabled{opacity:.55;}
+.him-app .him-help{font-size:12px;opacity:.85;margin:4px 0;}
+.him-app footer{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:10px;}
+.him-app button{padding:5px 10px;cursor:pointer;flex:none;}
+.him-app .him-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.him-app .him-row p{flex:1;min-width:150px;margin:0;}
+.him-app .him-row select{width:140px;}
+.him-app .him-table-scroll{overflow:auto;min-height:200px;max-height:430px;}
+.him-app table{width:100%;border-collapse:collapse;}
+.him-app th,.him-app td{padding:5px;border-bottom:1px solid var(--him-border);text-align:left;}
+.him-app th{position:sticky;top:0;background:var(--color-bg, #292929);z-index:1;}
+.him-app .him-number{font-variant-numeric:tabular-nums;text-align:center;}
+.him-app .him-avatar{vertical-align:middle;width:29px;height:29px;border-radius:4px;object-fit:cover;margin-right:5px;}
+.him-app .him-mini{min-width:32px;}
+.him-app footer label{display:flex;gap:6px;align-items:center;}
+.him-app footer input[name="amount"]{width:75px;}
+.him-directory-btn{margin:0 2px;}
