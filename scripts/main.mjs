@@ -1,5 +1,5 @@
 import { ID, ACTIVITY_ID, tr, get, num, registerSettings, isManaged, managedItem, charges,
-  chargeCost, canUse, mirrorInspiration, useFromStar, log } from "./core.mjs";
+  chargeCost, canUse, mirrorInspiration, useFromStar, restGrantSources, adjust, log } from "./core.mjs";
 import { SettingsWindow, ManagerWindow } from "./ui.mjs";
 
 const activeUses=new Set();
@@ -113,20 +113,23 @@ function isActorDirectory(app){
 }
 function addDirectoryButton(root){
   if(!game.user?.isGM || !root || root.querySelector(".him-directory-btn"))return;
-  // The header is distinct in V13/V14; never inject into a non-Actor tab.
   const header=root.matches?.(".directory-header") ? root :
     root.querySelector(".directory-header, [data-part='header'], .directory-header-buttons, .header-actions");
-  const anchor=header || root;
   const button=document.createElement("button");
   button.type="button";
   button.className="him-directory-btn";
   button.innerHTML=`<i class="fas fa-star"></i> ${tr("Manager")}`;
   button.addEventListener("click",event=>{event.preventDefault();openManager();});
-  if(header===root)header.append(button);
-  else if(header?.classList?.contains("directory-header") || header?.matches?.("[data-part='header']")){
-    header.insertAdjacentElement("afterend",button);
-  } else anchor.prepend(button);
+  // Place before the search control, not between search and the folders.
+  const searchInput=root.querySelector('input[type="search"], input[name="search"], input[placeholder*="Search"], input[placeholder*="Buscar"]');
+  const searchContainer=searchInput?.closest(".header-search, .directory-search, .search, .search-bar, form") || searchInput?.parentElement;
+  const searchArea=root.querySelector(".header-search, .directory-search, .search-bar");
+  const anchor=searchContainer || searchArea;
+  if(anchor?.parentElement && root.contains(anchor)) anchor.insertAdjacentElement("beforebegin",button);
+  else if(header) header.prepend(button);
+  else root.prepend(button);
 }
+
 function directoryRoots(){
   const candidates=[game.actors?.directory?.element,ui.actors?.element,
     document.querySelector("#actors"),document.querySelector("#sidebar-tab-actors"),
@@ -169,6 +172,53 @@ Hooks.on("renderApplicationV2",(app,html)=>{
   if(app?.actor?.type==="character")bindStar(app,html);
 });
 
+
+// Rest grants use feature identifiers (not species names or HTML descriptions).
+// Route player-initiated rest completion to the active GM for an authorized Item update.
+const pendingLongRests=new Map();
+const handledRestMessages=new Set();
+function checkLongRest(actor,result,config){
+  const data=[config?.type,config?.restType,result?.type,result?.restType]
+    .map(x=>String(x??"").toLowerCase());
+  if(data.some(x=>["long","longrest","long-rest","lr"].includes(x)))return true;
+  if(config?.longRest===true || result?.longRest===true || result?.isLongRest===true)return true;
+  return (pendingLongRests.get(actor.uuid) || 0)>Date.now()-3600000;
+}
+async function processRestGrant({actorUuid,nonce}){
+  if(!game.user.isGM || (game.users.activeGM && game.users.activeGM.id!==game.user.id))return;
+  if(!nonce || handledRestMessages.has(nonce))return;
+  handledRestMessages.add(nonce);
+  if(handledRestMessages.size>500)handledRestMessages.clear();
+  const actor=await fromUuid(actorUuid);
+  if(!actor || actor.type!=="character" || !restGrantSources(actor).length)return;
+  try{
+    const result=await adjust(actor,"grant",1);
+    if(result?.added>0) console.info(`[${ID}] Long Rest feature granted Heroic Inspiration:`,actor.name,result.after);
+  }catch(e){console.warn(`[${ID}] Unable to apply Long Rest inspiration:`,e);}
+}
+function setupRestGrants(){
+  const channel=`module.${ID}`;
+  game.socket?.on(channel,message=>{
+    if(message?.kind!=="longRestFeatureGrant" || !game.user.isGM)return;
+    processRestGrant(message).catch(console.warn);
+  });
+  Hooks.on("dnd5e.preLongRest",actor=>{
+    if(actor?.uuid)pendingLongRests.set(actor.uuid,Date.now());
+  });
+  Hooks.on("dnd5e.preShortRest",actor=>{
+    if(actor?.uuid)pendingLongRests.delete(actor.uuid);
+  });
+  Hooks.on("dnd5e.restCompleted",(actor,result,config)=>{
+    if(!actor?.uuid)return;
+    const longRest=checkLongRest(actor,result,config);
+    pendingLongRests.delete(actor.uuid);
+    if(!longRest || !restGrantSources(actor).length)return;
+    const message={kind:"longRestFeatureGrant",actorUuid:actor.uuid,nonce:foundry.utils.randomID()};
+    if(game.user.isGM && (!game.users.activeGM || game.users.activeGM.id===game.user.id)){
+      processRestGrant(message).catch(console.warn);
+    } else game.socket?.emit(channel,message);
+  });
+}
 Hooks.once("init",()=>{
   if(game.system.id!=="dnd5e")return;
   registerSettings(SettingsWindow);
@@ -177,8 +227,9 @@ Hooks.once("ready",()=>{
   if(game.system.id!=="dnd5e")return;
   const v=game.system.version;
   const expected=foundry.utils.isNewerVersion(v,"6.0.0")?"D&D5e 6.x":"D&D5e 5.2.x";
-  log(`v0.0.2 ready on Foundry ${game.version}, ${expected} (${v}).`);
+  log(`v0.0.3 ready on Foundry ${game.version}, ${expected} (${v}).`);
   installActivityGate();
+  setupRestGrants();
   observeActorDirectory();
   Hooks.on("renderActorSheetV2",bindStar);
   Hooks.on("renderActorSheet",bindStar);

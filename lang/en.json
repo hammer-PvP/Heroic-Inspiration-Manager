@@ -81,6 +81,12 @@
     "OpenManager": "Open Manager",
     "IncludeNPCs": "Also include NPCs",
     "SyncScopeHint": "Characters are synchronized by default. Check this option to include NPCs. Existing balances are preserved.",
-    "SyncResult": "Sync complete: {created} created, {updated} updated, {failed} failed."
+    "SyncResult": "Sync complete: {created} created, {updated} updated, {failed} failed.",
+    "BrowseIcon": "Browse / upload image",
+    "ResetIcon": "Restore default icon",
+    "GroupFilter": "Group",
+    "AllGroups": "All groups",
+    "RestGrantIdentifiers": "Long Rest feature identifiers",
+    "RestGrantIdentifiersHint": "Structured feature identifiers (comma-separated) that grant +1 Heroic Inspiration after a Long Rest. Default: resourceful. These are Item identifiers, not displayed names."
   }
 }

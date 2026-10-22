@@ -1,4 +1,4 @@
-/** Heroic Inspiration Manager v0.0.2 — system-agnostic UI, D&D5e-native item uses. */
+/** Heroic Inspiration Manager v0.0.3 — system-agnostic UI, D&D5e-native item uses. */
 export const ID = "heroic-inspiration-manager";
 export const ACTIVITY_ID = "himInspireUse001";
 export const log = (...args) => console.log(`[${ID}]`, ...args);
@@ -11,6 +11,38 @@ export const chargeCost = () => Math.max(1, num(get("cost"), 1));
 export const isManaged = (item) => Boolean(item?.getFlag?.(ID,"managed"));
 export const eligibleActors = () => game.actors.contents.filter(a => ["character","npc"].includes(a.type));
 export const managedItem = (actor) => actor?.items?.find(isManaged) ?? null;
+
+/** Read native D&D5e Group membership. No directory-folder membership or name matching. */
+export function groupActors() {
+  return game.actors.contents.filter(a => a.type === "group");
+}
+export function groupMemberIds(group) {
+  const raw = group?.system?.members;
+  if (!raw) return new Set();
+  const entries = Array.isArray(raw) ? raw : typeof raw.values === "function" ? [...raw.values()] : Object.values(raw);
+  const ids = new Set();
+  for (const m of entries) {
+    // Actor documents, embedded member objects, IDs and UUIDs may differ by version.
+    const candidates = [m?.actor?.id, m?.actor?._id, m?.actor?.uuid, m?.actorId, m?.id,
+      m?.uuid, m?.actor, m?.actorUuid, m?.reference, typeof m === "string" ? m : null];
+    for (const c of candidates) {
+      const id = typeof c === "string" ? c.split(".").at(-1) : null;
+      if (id && game.actors.get(id)?.id === id) ids.add(id);
+    }
+  }
+  return ids;
+}
+/** Structured Item identifier only; never infer grants from race names or descriptions. */
+export function restGrantSources(actor) {
+  const configured = String(get("longRestFeatureIds") || "").split(/[,;\n]/)
+    .map(v => v.trim().toLowerCase()).filter(Boolean);
+  if (!configured.length || actor?.type !== "character") return [];
+  return actor.items.filter(item => {
+    const identifier = String(item.system?.identifier || "").trim().toLowerCase();
+    return identifier && configured.includes(identifier);
+  });
+}
+
 export const charges = (item) => !item ? 0 : Math.max(0, num(item.system?.uses?.max) - num(item.system?.uses?.spent));
 export const capacity = () => isUnlimited() ? Infinity : configuredMax();
 export const escapeHTML = (v) => foundry.utils.escapeHTML(String(v ?? ""));
@@ -24,6 +56,7 @@ export function registerSettings(menuApp) {
     gmDirectEdit: [Boolean,true], soundEnabled: [Boolean,false], soundFile: [String,""], volume: [Number,0.7],
     fxEnabled: [Boolean,false], fxPreset: [String,""], fxSeconds: [Number,5],
     chatFlavor: [String,"A determinação desafia o destino. Uma nova chance surge quando tudo parecia perdido."],
+    longRestFeatureIds: [String,"resourceful"],
     attunementCombatLock: [Boolean,true]
   };
   for (const [key,[type,def]] of Object.entries(fields)) {
@@ -58,7 +91,7 @@ function desiredItemData(balance=0) {
       properties:get("attunement") ? ["mgc"] : [],
       uses:{max:String(max),spent,recovery},activities:{[ACTIVITY_ID]:activitySource()},
       description:{value:`<p>${escapeHTML(tr("ItemDescription"))}</p>`}},
-    flags:{[ID]:{managed:true,version:"0.0.2"}}
+    flags:{[ID]:{managed:true,version:"0.0.3"}}
   };
 }
 

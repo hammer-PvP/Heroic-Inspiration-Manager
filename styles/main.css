@@ -26,3 +26,10 @@
 /* v0.0.2 Actor Directory action and explicit sync scope. */
 .him-directory-btn {display:block;width:calc(100% - 10px);margin:5px;min-height:30px;cursor:pointer;}
 .him-sync-options {border-top:1px solid var(--him-border);padding-top:8px;}
+
+/* v0.0.3: native file picker preview and group filtering */
+.him-icon-control{display:flex;flex-direction:column;gap:6px;}
+.him-icon-preview{width:42px;height:42px;object-fit:contain;border-radius:5px;border:1px solid var(--him-border);}
+.him-manager select[name="groupFilter"]{min-width:165px;max-width:250px;flex:1;}
+/* The directory control belongs in its header, directly preceding search. */
+.directory-header > .him-directory-btn{width:calc(100% - 10px);flex:0 0 auto;order:0;}

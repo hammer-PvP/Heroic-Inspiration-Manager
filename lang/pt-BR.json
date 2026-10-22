@@ -81,6 +81,12 @@
     "OpenManager": "Abrir Gerenciador",
     "IncludeNPCs": "Incluir também NPCs",
     "SyncScopeHint": "Por padrão, sincroniza apenas Characters. Marque para incluir NPCs. Os saldos existentes são preservados.",
-    "SyncResult": "Sincronização concluída: {created} criados, {updated} atualizados, {failed} falhas."
+    "SyncResult": "Sincronização concluída: {created} criados, {updated} atualizados, {failed} falhas.",
+    "BrowseIcon": "Selecionar / enviar imagem",
+    "ResetIcon": "Restaurar ícone padrão",
+    "GroupFilter": "Grupo",
+    "AllGroups": "Todos os grupos",
+    "RestGrantIdentifiers": "Identificadores de características (Descanso Longo)",
+    "RestGrantIdentifiersHint": "Identificadores técnicos de características (separados por vírgula) que concedem +1 Inspiração Heroica após Descanso Longo. Padrão: resourceful. Não são nomes exibidos."
   }
 }

@@ -1,53 +1,59 @@
 # Heroic Inspiration Manager
 
-**Version 0.0.2**
+**Version 0.0.3** — An independent D&D5e Foundry VTT module for managing Heroic Inspiration charges through a managed Equipment/Trinket Item, native Item Uses, and a Utility Activity.
 
-Heroic Inspiration charges managed through a D&D5e Equipment/Trinket, native Item Uses and a Utility Activity.
+## Supported target installations
 
-## Supported target configurations
+- Foundry VTT 13.351 / D&D5e 5.2.5 — **targeted; pending real-world QA**
+- Foundry VTT 14.369 / D&D5e 6.0.6 — tested by the author during the 0.0.2 series; new 0.0.3 changes require validation
 
-- Foundry VTT 13.351 / D&D5e 5.2.5
-- Foundry VTT 14.369 / D&D5e 6.0.6
+Token Magic FX is entirely optional. The module does not require Character Builder.
 
-Token Magic FX is optional. The module does not depend on the Character Builder.
+## Installation
 
-## Install
-
-Use the GitHub release manifest, once published:
+Paste the stable manifest URL in **Install Module** (after the release has been published):
 
 `https://github.com/hammer-PvP/Heroic-Inspiration-Manager/releases/latest/download/module.json`
 
-For manual installation, extract the ZIP's contents into:
-
-`Data/modules/heroic-inspiration-manager/`
-
-Enable the module in your World.
+For manual installation, copy the release ZIP's contents into `Data/modules/heroic-inspiration-manager/`.
 
 ## GM setup
 
-1. Open **Configure Settings → Heroic Inspiration → Settings**.
-2. Choose a fixed maximum or **no accumulation limit**. Configure cost, attunement, rest recovery, and optional audio/FX.
-3. Choose **Save and create/sync items**. This creates absent managed items for Characters and updates existing ones; **Include NPCs** is optional. Existing balances are preserved or capped to a reduced configured maximum.
-4. Open the **Heroic Inspiration Manager** using the Actors Directory button or **Open Manager** from Settings.
-5. Select Characters/NPCs and use **Apply item**, **Grant**, **Revoke**, or **Set exact**.
-6. Characters can consume charges using the native Item Activity or their sheet's Inspiration star.
+1. Enable Heroic Inspiration Manager in the World.
+2. Open its **Settings**, set Item name, maximum charges (fixed or unlimited accumulation), cost per use, Equipped/Attunement requirements, and optional Long Rest recovery, sound, or Token Magic FX.
+3. Choose an Item image with the built-in **Browse / Upload** button, or **Restore Default**.
+4. Click **Save and create/sync items** to install missing managed Items for Characters (NPCs optional) and update existing Items without clearing balances.
+5. Open **Heroic Inspiration Manager** from the Actors Directory (above Search Actors) or the Settings button.
+6. Filter by Actor Type and/or native D&D5e **Group Actor**, then Apply Item, Grant, Revoke, or Set Exact. Selection is cleared on filter changes to prevent unintended batch edits.
+7. Players may consume via the Item Activity or via the character sheet Inspiration star. Both refer to the same Item Uses balance. Native Activity use posts a chat declaration.
 
-The Inspiration star is an alternative use control, not an independent pool. Usage publishes the native Activity message in chat.
+## Human 2024 Resourceful / Long Rest
 
-## Notes
+With the default setting **Long Rest feature identifiers: `resourceful`**, after a successful Long Rest the module grants +1 Heroic Inspiration to a Character owning an Item whose **structured `system.identifier` equals `resourceful`**. This is independent of Item Uses Long Rest recovery and obeys the maximum or unlimited mode.
 
-- Unlimited accumulation does **not** mean unlimited free use: available charges are tracked in the native Item Uses fields. The GM may grant additional charges without a configured cap.
-- The module uses an identifying Item flag. A non-managed Item with the same name will not be silently replaced.
-- Players are restricted from editing managed properties through normal interface updates. This is a client-side restriction and does not provide an authoritative server-side security boundary against modified clients.
-- Existing native Inspiration should be migrated deliberately through **Set exact**. A native boolean cannot represent several accumulated charges.
-- Optional FX is temporary, uses the configured preset and duration, and does not touch unrelated token filters.
+- This feature does **not** guess based on species name, free-text descriptions, or chat message text.
+- If an imported or translated feature does not expose a matching identifier, add its structured Item identifier to the comma-separated setting; do not use its display name. A GM can inspect the identifier on the Item.
+- Grant processing runs on the active GM (or asks the active GM over Foundry's module socket when the player completes the rest). A GM must be online for player-initiated grants.
+- The D&D5e `restCompleted` / `preLongRest` hooks are used; restoration through nonstandard third-party rest replacements requires an integration test.
+- Granting does not play the GM's manual-grant sound/FX.
 
-## v0.0.2
+## Safety and limitations
 
-- Improved Actor Directory button insertion in V13/V14 and added direct access through Settings.
-- Settings synchronization now creates missing Items and reports created, updated and failed counts.
-- Added explicit NPC inclusion for Settings synchronization; Characters remain the default.
-- Preserved balances on reconciliation and prevented duplicate managed Items.
-- Kept valid Activity consumption available to GMs when direct editing is disabled.
+- Fixed maximum caps the resource; unlimited mode allows the GM to mint additional available charges and **does not grant unlimited free uses**.
+- The module marks its own Items with a namespace flag; same-name unmanaged Items are never silently replaced.
+- Player Item editing protection is best effort inside normal Foundry clients, **not a server-enforced security boundary against malicious clients**.
+- Optional token filters are temporary and use their own IDs. Token Magic FX is never a hard dependency.
+- Group filters read D&D5e Group Actor membership, **not Actor Directory folders**.
+- A `system.identifier` based Long Rest award is **not guaranteed for unmarked/imported Human features**; test on your actual Character before relying on it.
+- Native star reroll automation is not included; players declare use and roll as usual.
 
-Repository: https://github.com/hammer-PvP/Heroic-Inspiration-Manager
+## Publishing and community support
+
+- Software license: MIT — see [LICENSE](LICENSE).
+- Release history: [CHANGELOG.md](CHANGELOG.md).
+- Issues: https://github.com/hammer-PvP/Heroic-Inspiration-Manager/issues
+- Repository: https://github.com/hammer-PvP/Heroic-Inspiration-Manager
+- Manifest (always latest): https://github.com/hammer-PvP/Heroic-Inspiration-Manager/releases/latest/download/module.json
+- Release ZIP filename (always unversioned): `heroic-inspiration-manager.zip`.
+
+For the Foundry official package catalogue, the **author** must review and approve the submitted user-facing strings, description, localization and any promotional materials for compliance with the applicable Foundry AI Content Policy. A technically valid manifest is not approval from the Foundry team. The author remains responsible for understanding the code and meeting the published terms of submission.

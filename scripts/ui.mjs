@@ -1,4 +1,4 @@
-import {ID,tr,get,num,escapeHTML,findTMFX,eligibleActors,snapshot,reconcile,adjust,celebrate,isUnlimited,configuredMax} from "./core.mjs";
+import {ID,tr,get,num,escapeHTML,findTMFX,eligibleActors,snapshot,reconcile,adjust,celebrate,isUnlimited,configuredMax,groupActors,groupMemberIds} from "./core.mjs";
 const AppV2=foundry.applications.api.ApplicationV2;
 const esc=escapeHTML;
 const opt=(value,label,selected)=>`<option value="${esc(value)}" ${selected===value?"selected":""}>${esc(label)}</option>`;
@@ -21,13 +21,22 @@ export class SettingsWindow extends HIMWindow {
     if(fxOK){try{const p=globalThis.TokenMagic.getPresets();presets=Array.isArray(p)?p.map(x=>typeof x==="string"?x:x.name||x.id).filter(Boolean):Object.keys(p??{});}catch(e){console.warn(e);}}
     return `<form class="him-settings-form"><h3>${esc(tr("ItemConfig"))}</h3>
       ${field("itemName",tr("ItemName"),get("itemName"))}
-      ${field("icon",tr("Icon"),get("icon"))}
+      <div class="him-icon-control">
+        ${field("icon",tr("Icon"),get("icon"))}
+        <div class="him-row him-browse">
+          <img class="him-icon-preview" src="${esc(get("icon")||"systems/dnd5e/ui/inspiration.webp")}" alt="">
+          <button type="button" data-him="browseIcon"><i class="fas fa-folder-open"></i> ${esc(tr("BrowseIcon"))}</button>
+          <button type="button" data-him="resetIcon"><i class="fas fa-undo"></i> ${esc(tr("ResetIcon"))}</button>
+        </div>
+      </div>
       ${select("maxMode",tr("MaximumMode"),[["fixed",tr("Fixed")],["unlimited",tr("Unlimited")]],get("maxMode"))}
       ${field("maxCharges",tr("MaxCharges"),get("maxCharges"),"number","min=1 step=1")}
       ${field("cost",tr("Cost"),get("cost"),"number","min=1 step=1")}
       ${toggle("attunement",tr("RequireAttunement"),get("attunement"))}
       ${select("recovery",tr("Recovery"),[["none",tr("RecoveryNone")],["all",tr("RecoveryAll")],["formula",tr("RecoveryFormula")]],get("recovery"))}
       ${field("recoveryFormula",tr("Formula"),get("recoveryFormula"))}
+      ${field("longRestFeatureIds",tr("RestGrantIdentifiers"),get("longRestFeatureIds"))}
+      <p class="him-help">${esc(tr("RestGrantIdentifiersHint"))}</p>
       ${field("chatFlavor",tr("ChatFlavor"),get("chatFlavor"))}
       <h3>${esc(tr("Protection"))}</h3>
       ${toggle("playerProtection",tr("ProtectPlayer"),get("playerProtection"))}
@@ -78,6 +87,21 @@ export class SettingsWindow extends HIMWindow {
         setTimeout(()=>{globalThis.TokenMagic?.deleteFilters?.(token,filterId)?.catch?.(console.warn);},duration*1000);
       }catch(e){ui.notifications.warn(e.message);}
     });
+    el.querySelector('[data-him="browseIcon"]')?.addEventListener("click",()=>{
+      const Picker=foundry.applications.apps.FilePicker;
+      const input=form.querySelector('input[name="icon"]');
+      new Picker({type:"image",current:input.value,callback:path=>{
+        input.value=path;
+        const preview=form.querySelector(".him-icon-preview");
+        if(preview)preview.src=path;
+      }}).render(true);
+    });
+    el.querySelector('[data-him="resetIcon"]')?.addEventListener("click",()=>{
+      const path="systems/dnd5e/ui/inspiration.webp";
+      form.querySelector('input[name="icon"]').value=path;
+      const preview=form.querySelector(".him-icon-preview");
+      if(preview)preview.src=path;
+    });
     el.querySelector('[data-him="browseSound"]')?.addEventListener("click",()=>{
       const Picker=foundry.applications.apps.FilePicker;
       const current=form.querySelector('input[name="soundFile"]');
@@ -88,7 +112,7 @@ export class SettingsWindow extends HIMWindow {
       const fd=new FormData(form);
       const bools=new Set(["attunement","playerProtection","gmDirectEdit","soundEnabled","fxEnabled","attunementCombatLock"]);
       const nums=new Set(["maxCharges","cost","volume","fxSeconds"]);
-      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","chatFlavor","playerProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxEnabled","fxPreset","fxSeconds"]){
+      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","longRestFeatureIds","chatFlavor","playerProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxEnabled","fxPreset","fxSeconds"]){
         let val=bools.has(key)?fd.has(key):fd.get(key);
         if(nums.has(key)) val=Number(val);
         if(key==="maxCharges"||key==="cost")val=Math.max(1,num(val,1));
@@ -130,9 +154,15 @@ export class SettingsWindow extends HIMWindow {
 
 export class ManagerWindow extends HIMWindow {
   static DEFAULT_OPTIONS={id:"him-manager",window:{title:"Heroic Inspiration Manager",resizable:true},position:{width:790,height:660},classes:["him-app"]};
-  selected=new Set(); typeFilter="character";
+  selected=new Set(); typeFilter="character"; groupFilter="all";
+  visibleActors(){
+    const members=this.groupFilter==="all"?null:groupMemberIds(game.actors.get(this.groupFilter));
+    return eligibleActors().filter(a=>(this.typeFilter==="all"||a.type===this.typeFilter)&&(!members||members.has(a.id)));
+  }
   async _renderHTML(){
-    const all=eligibleActors().filter(a=>this.typeFilter==="all" || a.type===this.typeFilter);
+    const all=this.visibleActors();
+    const groups=groupActors().sort((a,b)=>a.name.localeCompare(b.name));
+    if(this.groupFilter!=="all" && !groups.some(g=>g.id===this.groupFilter))this.groupFilter="all";
     const rows=all.map(a=>{const s=snapshot(a);
       return `<tr><td><input class="him-select" data-actor="${esc(a.id)}" type="checkbox" ${this.selected.has(a.id)?"checked":""}></td>
       <td><img class="him-avatar" src="${esc(a.img)}" alt=""> ${esc(a.name)}</td>
@@ -141,6 +171,7 @@ export class ManagerWindow extends HIMWindow {
     }).join("");
     return `<section class="him-manager"><header class="him-row"><p>${esc(tr("SelectActors"))}</p>
       <select name="filter">${[["character",tr("Characters")],["npc",tr("NPCs")],["all",tr("All")]].map(([v,l])=>opt(v,l,this.typeFilter)).join("")}</select>
+      <select name="groupFilter" aria-label="${esc(tr("GroupFilter"))}">${[["all",tr("AllGroups")],...groups.map(g=>[g.id,g.name])].map(([v,l])=>opt(v,l,this.groupFilter)).join("")}</select>
       <button data-him="all">${esc(tr("SelectAll"))}</button><button data-him="clear">${esc(tr("Clear"))}</button></header>
       <div class="him-table-scroll"><table><thead><tr><th></th><th>${esc(tr("Actor"))}</th><th>${esc(tr("Item"))}</th><th>${esc(tr("Charges"))}</th><th>${esc(tr("Status"))}</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="6">${esc(tr("NoActors"))}</td></tr>`}</tbody></table></div>
       <footer><label>${esc(tr("Amount"))} <input name="amount" type="number" min="0" step="1" value="1"></label>
@@ -151,15 +182,17 @@ export class ManagerWindow extends HIMWindow {
       <p class="him-help">${esc(tr("MigrationNote"))}</p></section>`;
   }
   bind(el){
-    el.querySelector('select[name="filter"]').addEventListener("change",e=>{this.typeFilter=e.target.value;this.render();});
+    el.querySelector('select[name="filter"]').addEventListener("change",e=>{this.typeFilter=e.target.value;this.selected.clear();this.render();});
+    el.querySelector('select[name="groupFilter"]').addEventListener("change",e=>{this.groupFilter=e.target.value;this.selected.clear();this.render();});
     el.querySelectorAll(".him-select").forEach(c=>c.addEventListener("change",e=>{e.target.checked?this.selected.add(e.target.dataset.actor):this.selected.delete(e.target.dataset.actor);}));
     el.querySelectorAll("button[data-him]").forEach(button=>button.addEventListener("click",async()=>{
       const action=button.dataset.him;
-      if(action==="all"){eligibleActors().filter(a=>this.typeFilter==="all"||a.type===this.typeFilter).forEach(a=>this.selected.add(a.id));this.render();return;}
+      if(action==="all"){this.visibleActors().forEach(a=>this.selected.add(a.id));this.render();return;}
       if(action==="clear"){this.selected.clear();this.render();return;}
       if(action==="single"){this.selected=new Set([button.dataset.actor]);}
       const amount=num(el.querySelector('input[name="amount"]').value,1);
-      const actors=[...this.selected].map(id=>game.actors.get(id)).filter(Boolean);
+      const visibleIds=new Set(this.visibleActors().map(a=>a.id));
+      const actors=[...this.selected].filter(id=>visibleIds.has(id)).map(id=>game.actors.get(id)).filter(Boolean);
       if(!actors.length){ui.notifications.warn(tr("NoSelected"));return;}
       if(action==="single"){
         const a=actors[0];
