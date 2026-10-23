@@ -1,8 +1,8 @@
 {
   "id": "heroic-inspiration-manager",
   "title": "Heroic Inspiration Manager",
-  "description": "Managed Heroic Inspiration charges, GM distribution, native Activity use and optional grant effects for D&D5e.",
-  "version": "0.0.3",
+  "description": "Manage Heroic Inspiration charges, native Activity use, GM batch grants and optional Token Magic FX or Sequencer + free JB2A celebrations for D&D5e.",
+  "version": "0.0.4",
   "authors": [
     {
       "name": "hammer-PvP",
@@ -28,7 +28,17 @@
       {
         "id": "tokenmagic",
         "type": "module",
-        "reason": "Optional temporary token visual effects when the GM grants inspiration."
+        "reason": "Optional Token Magic FX grant celebration (choose either this or Sequencer)."
+      },
+      {
+        "id": "sequencer",
+        "type": "module",
+        "reason": "Optional visual animation engine for Heroic Inspiration grants."
+      },
+      {
+        "id": "JB2A_DnD5e",
+        "type": "module",
+        "reason": "Optional free animated effect library for the Sequencer integration."
       }
     ]
   },

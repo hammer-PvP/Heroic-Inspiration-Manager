@@ -1,4 +1,4 @@
-/** Heroic Inspiration Manager v0.0.3 — system-agnostic UI, D&D5e-native item uses. */
+/** Heroic Inspiration Manager v0.0.4 — system-agnostic UI, D&D5e-native item uses. */
 export const ID = "heroic-inspiration-manager";
 export const ACTIVITY_ID = "himInspireUse001";
 export const log = (...args) => console.log(`[${ID}]`, ...args);
@@ -43,6 +43,40 @@ export function restGrantSources(actor) {
   });
 }
 
+/** Actor Directory scope set by the GM. Group and type filters apply in the Manager grid. */
+export const actorFolders=()=>game.folders.contents.filter(f=>f.type==="Actor");
+function inFolder(actor,folderId,subfolders){
+  if(!folderId)return false;
+  let folder=actor?.folder;
+  if(typeof folder==="string")folder=game.folders.get(folder);
+  const visited=new Set();
+  while(folder){
+    if(typeof folder==="string")folder=game.folders.get(folder);
+    if(!folder || visited.has(folder.id))return false;
+    visited.add(folder.id);
+    if(folder.id===folderId)return true;
+    if(!subfolders)return false;
+    folder=folder.folder ?? folder.parent ?? null;
+  }
+  return false;
+}
+export function managementActors(){
+  const actors=eligibleActors();
+  const scope=get("managementScope");
+  if(scope==="folder"){
+    const folderId=get("managementFolderId");
+    if(!game.folders.get(folderId) || game.folders.get(folderId).type!=="Actor")return [];
+    return actors.filter(a=>inFolder(a,folderId,get("managementSubfolders")));
+  }
+  if(scope==="group"){
+    const group=game.actors.get(get("managementGroupId"));
+    if(group?.type!=="group")return [];
+    const members=groupMemberIds(group);
+    return actors.filter(a=>members.has(a.id));
+  }
+  return actors;
+}
+
 export const charges = (item) => !item ? 0 : Math.max(0, num(item.system?.uses?.max) - num(item.system?.uses?.spent));
 export const capacity = () => isUnlimited() ? Infinity : configuredMax();
 export const escapeHTML = (v) => foundry.utils.escapeHTML(String(v ?? ""));
@@ -57,7 +91,11 @@ export function registerSettings(menuApp) {
     fxEnabled: [Boolean,false], fxPreset: [String,""], fxSeconds: [Number,5],
     chatFlavor: [String,"A determinação desafia o destino. Uma nova chance surge quando tudo parecia perdido."],
     longRestFeatureIds: [String,"resourceful"],
-    attunementCombatLock: [Boolean,true]
+    attunementCombatLock: [Boolean,true],
+    fxEngine: [String,"none"], sequencerPath: [String,""], sequencerScale: [Number,1.75],
+    classFX: [Object,{}],
+    managementScope: [String,"all"], managementFolderId: [String,""],
+    managementGroupId: [String,""], managementSubfolders: [Boolean,true]
   };
   for (const [key,[type,def]] of Object.entries(fields)) {
     game.settings.register(ID,key,{scope:"world", config:false, type, default:def});
@@ -91,7 +129,7 @@ function desiredItemData(balance=0) {
       properties:get("attunement") ? ["mgc"] : [],
       uses:{max:String(max),spent,recovery},activities:{[ACTIVITY_ID]:activitySource()},
       description:{value:`<p>${escapeHTML(tr("ItemDescription"))}</p>`}},
-    flags:{[ID]:{managed:true,version:"0.0.3"}}
+    flags:{[ID]:{managed:true,version:"0.0.4"}}
   };
 }
 
@@ -200,7 +238,13 @@ export async function celebrate(results) {
     try { await foundry.audio.AudioHelper.play({src:get("soundFile"),volume:Number(get("volume")),autoplay:true,loop:false},true); }
     catch(err){console.warn(`[${ID}] Optional audio failed:`,err);}
   }
-  if(!get("fxEnabled") || !findTMFX() || !get("fxPreset")) return;
+  const engine=get("fxEngine")==="none" && get("fxEnabled") ? "tokenmagic" : get("fxEngine");
+  if(engine==="sequencer") {
+    try { const {playSequencerGrant}=await import("./seqfx.mjs");await playSequencerGrant(results); }
+    catch(err){console.warn(`[${ID}] Optional Sequencer celebration failed`,err);}
+    return;
+  }
+  if(engine!=="tokenmagic" || !findTMFX() || !get("fxPreset")) return;
   const preset=get("fxPreset");
   const seconds=Math.max(.1,Math.min(3600,Number(get("fxSeconds"))||5));
   for(const r of results) {

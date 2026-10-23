@@ -1,4 +1,5 @@
-import {ID,tr,get,num,escapeHTML,findTMFX,eligibleActors,snapshot,reconcile,adjust,celebrate,isUnlimited,configuredMax,groupActors,groupMemberIds} from "./core.mjs";
+import {ID,tr,get,num,escapeHTML,findTMFX,eligibleActors,snapshot,reconcile,adjust,celebrate,isUnlimited,configuredMax,groupActors,groupMemberIds,actorFolders,managementActors} from "./core.mjs";
+import {freeJB2AAvailable,freeJB2APaths,highlightedPaths,testSequencerFX,classIds} from "./seqfx.mjs";
 const AppV2=foundry.applications.api.ApplicationV2;
 const esc=escapeHTML;
 const opt=(value,label,selected)=>`<option value="${esc(value)}" ${selected===value?"selected":""}>${esc(label)}</option>`;
@@ -19,6 +20,19 @@ export class SettingsWindow extends HIMWindow {
     const fxOK=findTMFX();
     let presets=[];
     if(fxOK){try{const p=globalThis.TokenMagic.getPresets();presets=Array.isArray(p)?p.map(x=>typeof x==="string"?x:x.name||x.id).filter(Boolean):Object.keys(p??{});}catch(e){console.warn(e);}}
+    const seqOK=freeJB2AAvailable();
+    const installedPaths=seqOK?freeJB2APaths():[];
+    const fxEngine=get("fxEngine")==="none" && get("fxEnabled")?"tokenmagic":get("fxEngine");
+    const folders=actorFolders().sort((a,b)=>a.name.localeCompare(b.name));
+    const groups=groupActors().sort((a,b)=>a.name.localeCompare(b.name));
+    const managementScope=get("managementScope");
+    const featured=highlightedPaths(installedPaths);
+    const chosen=get("sequencerPath");
+    const shown=[...new Set([chosen,...featured.slice(0,220)].filter(Boolean))];
+    const classOverrides=get("classFX")??{};
+    const classes=classIds();
+    const classChoices=[...new Set([...Object.values(classOverrides),...featured.slice(0,160)].filter(Boolean))];
+    const configuredCount=classes.filter(id=>classOverrides[id]).length;
     return `<form class="him-settings-form"><h3>${esc(tr("ItemConfig"))}</h3>
       ${field("itemName",tr("ItemName"),get("itemName"))}
       <div class="him-icon-control">
@@ -38,6 +52,16 @@ export class SettingsWindow extends HIMWindow {
       ${field("longRestFeatureIds",tr("RestGrantIdentifiers"),get("longRestFeatureIds"))}
       <p class="him-help">${esc(tr("RestGrantIdentifiersHint"))}</p>
       ${field("chatFlavor",tr("ChatFlavor"),get("chatFlavor"))}
+      <h3>${esc(tr("ManagementScope"))}</h3>
+      ${select("managementScope",tr("ActorSource"),[["all",tr("AllActorsSource")],["folder",tr("SpecificFolder")],["group",tr("SpecificGroup")]],managementScope)}
+      <div data-him-source="folder" ${managementScope==="folder"?"":"hidden"}>
+        ${select("managementFolderId",tr("ActorFolder"),[["",tr("ChooseFolder")],...folders.map(f=>[f.id,f.name])],get("managementFolderId"))}
+        ${toggle("managementSubfolders",tr("IncludeSubfolders"),get("managementSubfolders"))}
+      </div>
+      <div data-him-source="group" ${managementScope==="group"?"":"hidden"}>
+        ${select("managementGroupId",tr("ActorGroup"),[["",tr("ChooseGroup")],...groups.map(g=>[g.id,g.name])],get("managementGroupId"))}
+      </div>
+      <p class="him-help">${esc(tr("ManagementScopeHint"))}</p>
       <h3>${esc(tr("Protection"))}</h3>
       ${toggle("playerProtection",tr("ProtectPlayer"),get("playerProtection"))}
       ${toggle("gmDirectEdit",tr("GMDirect"),get("gmDirectEdit"))}
@@ -47,12 +71,36 @@ export class SettingsWindow extends HIMWindow {
       ${field("soundFile",tr("SoundFile"),get("soundFile"))}
       <div class="him-row him-browse"><button type="button" data-him="browseSound"><i class="fas fa-folder-open"></i> ${esc(tr("BrowseSound"))}</button><button type="button" data-him="testSound">${esc(tr("TestSound"))}</button></div>
       ${field("volume",tr("SoundVolume"),get("volume"),"number","min=0 max=1 step=0.05")}
-      <div class="him-fx-settings ${fxOK?"":"him-disabled"}">
-      ${toggle("fxEnabled",tr("FXEnabled"),fxOK&&get("fxEnabled"),!fxOK)}
-      ${select("fxPreset",tr("FXPreset"),[["",tr("ChoosePreset")],...presets.map(n=>[n,n])],get("fxPreset"),!fxOK)}
-      ${field("fxSeconds",tr("FXSeconds"),get("fxSeconds"),"number",`min=0.1 max=3600 step=0.1 ${fxOK?"":"disabled"}`)}
-      ${fxOK?`<div class="him-row"><button type="button" data-him="testFX">${esc(tr("TestFX"))}</button></div>`:""}
-      ${fxOK?"":`<p class="him-help">${esc(tr("FXMissing"))} <a target="_blank" rel="noopener noreferrer" href="https://foundryvtt.com/packages/tokenmagic">Token Magic FX ↗</a></p>`}
+      <label class="him-field"><span>${esc(tr("FXEngine"))}</span><select name="fxEngine">
+        ${opt("none",tr("FXNone"),fxEngine)}
+        <option value="tokenmagic" ${fxEngine==="tokenmagic"?"selected":""} ${!fxOK&&fxEngine!=="tokenmagic"?"disabled":""}>${esc(tr("FXTokenMagic"))}${fxOK?"":" — "+esc(tr("Unavailable"))}</option>
+        <option value="sequencer" ${fxEngine==="sequencer"?"selected":""} ${!seqOK&&fxEngine!=="sequencer"?"disabled":""}>${esc(tr("FXSequencer"))}${seqOK?"":" — "+esc(tr("Unavailable"))}</option>
+      </select></label>
+      <div class="him-fx-settings ${fxOK?"":"him-disabled"}" data-him-engine="tokenmagic" ${fxEngine==="tokenmagic"?"":"hidden"}>
+        ${select("fxPreset",tr("FXPreset"),[["",tr("ChoosePreset")],...presets.map(n=>[n,n])],get("fxPreset"),!fxOK)}
+        ${fxOK?`<div class="him-row"><button type="button" data-him="testFX">${esc(tr("TestFX"))}</button></div>`:""}
+        ${fxOK?"":`<p class="him-help">${esc(tr("FXMissing"))} <a target="_blank" rel="noopener noreferrer" href="https://foundryvtt.com/packages/tokenmagic">Token Magic FX ↗</a></p>`}
+      </div>
+      <div class="him-fx-settings ${seqOK?"":"him-disabled"}" data-him-engine="sequencer" ${fxEngine==="sequencer"?"":"hidden"}>
+        ${seqOK?`<label class="him-field"><span>${esc(tr("AnimationSearch"))}</span><input name="animationSearch" type="search" placeholder="${esc(tr("AnimationSearchHint"))}"></label>`:""}
+        ${select("sequencerPath",tr("JB2AAnimation"),[["",tr("ChooseAnimation")],...shown.map(v=>[v,v.replace(/^jb2a\./,"").replaceAll("."," / ")])],chosen,!seqOK)}
+        ${field("sequencerScale",tr("AnimationScale"),get("sequencerScale"),"number",`min=0.5 max=4 step=0.05 ${seqOK?"":"disabled"}`)}
+        ${seqOK?`<p class="him-help">${esc(tr("FreeJB2AOnly"))} (${installedPaths.length})</p><div class="him-row"><button type="button" data-him="testSequencer">${esc(tr("TestFX"))}</button></div>`:
+          `<p class="him-help">${esc(tr("SequencerMissing"))} <a href="https://foundryvtt.com/packages/sequencer" target="_blank" rel="noopener noreferrer">Sequencer ↗</a> · <a href="https://foundryvtt.com/packages/JB2A_DnD5e" target="_blank" rel="noopener noreferrer">JB2A Free ↗</a></p>`}
+        <details class="him-class-fx" ${seqOK?"":"data-disabled"}>
+          <summary><i class="fas fa-chevron-right"></i> ${esc(tr("ClassFX"))} <span class="him-class-count">${configuredCount} / ${classes.length} ${esc(tr("Customized"))}</span></summary>
+          <div class="him-class-inner">
+            <p class="him-help">${esc(tr("ClassFXHint"))}</p>
+            ${seqOK?`<label class="him-field"><span>${esc(tr("ClassAnimationSearch"))}</span><input name="classAnimationSearch" type="search" placeholder="${esc(tr("AnimationSearchHint"))}"></label>`:""}
+            ${classes.map(id=>`<div class="him-class-row"><label for="him-class-${esc(id)}">${esc(tr("Class_"+id))}</label><select id="him-class-${esc(id)}" name="classFX.${esc(id)}" class="him-class-select" data-class="${esc(id)}" ${seqOK?"":"disabled"}>
+              ${opt("",tr("UseGlobal"),classOverrides[id]||"")}
+              ${classChoices.map(path=>opt(path,path.replace(/^jb2a\./,"").replaceAll("."," / "),classOverrides[id]||"")).join("")}
+            </select><button type="button" data-him="testClassFX" data-class="${esc(id)}" ${seqOK?"":"disabled"} title="${esc(tr("TestClassFX"))}"><i class="fas fa-play"></i></button></div>`).join("")}
+          </div>
+        </details>
+      </div>
+      <div data-him-engine="timing" ${fxEngine==="none"?"hidden":""}>
+        ${field("fxSeconds",tr("FXSeconds"),get("fxSeconds"),"number","min=0.1 max=3600 step=0.1")}
       </div><section class="him-sync-options">
       ${toggle("syncNPCs",tr("IncludeNPCs"),false)}
       <p class="him-help">${esc(tr("SyncScopeHint"))}</p></section>
@@ -107,20 +155,93 @@ export class SettingsWindow extends HIMWindow {
       const current=form.querySelector('input[name="soundFile"]');
       new Picker({type:"audio",current:current.value,callback:(path)=>{current.value=path;}}).render(true);
     });
+    const scopeSelect=form.querySelector('select[name="managementScope"]');
+    scopeSelect?.addEventListener("change",()=>{
+      form.querySelectorAll("[data-him-source]").forEach(node=>node.hidden=node.dataset.himSource!==scopeSelect.value);
+    });
+    const engineSelect=form.querySelector('select[name="fxEngine"]');
+    engineSelect?.addEventListener("change",()=>{
+      form.querySelectorAll("[data-him-engine]").forEach(node=>{
+        node.hidden=node.dataset.himEngine==="timing" ? engineSelect.value==="none" : node.dataset.himEngine!==engineSelect.value;
+      });
+    });
+    const animSearch=form.querySelector('input[name="animationSearch"]');
+    animSearch?.addEventListener("input",()=>{
+      const v=animSearch.value.trim().toLowerCase();
+      const selector=form.querySelector('select[name="sequencerPath"]');
+      const selected=selector.value;
+      const paths=v?installedSearch(installedList,v):highlightedList(installedList);
+      const shown=[...new Set([selected,...paths.slice(0,350)].filter(Boolean))];
+      selector.innerHTML=`<option value="">${esc(tr("ChooseAnimation"))}</option>`+shown.map(x=>opt(x,x.replace(/^jb2a\./,"").replaceAll("."," / "),selected)).join("");
+    });
+    function installedList(){return freeJB2APaths();}
+    function installedSearch(all,term){return all().filter(p=>p.toLowerCase().includes(term));}
+    function highlightedList(all){return highlightedPaths(all());}
+    const classSearch=form.querySelector('input[name="classAnimationSearch"]');
+    classSearch?.addEventListener("input",()=>{
+      const q=classSearch.value.trim().toLowerCase();
+      const choices=q?freeJB2APaths().filter(x=>x.toLowerCase().includes(q)).slice(0,200):highlightedPaths(freeJB2APaths()).slice(0,160);
+      form.querySelectorAll("select.him-class-select").forEach(selector=>{
+        const selected=selector.value;
+        const paths=[...new Set([selected,...choices].filter(Boolean))];
+        selector.innerHTML=opt("",tr("UseGlobal"),selected)+paths.map(path=>opt(path,path.replace(/^jb2a\./,"").replaceAll("."," / "),selected)).join("");
+      });
+    });
+    form.querySelectorAll('select.him-class-select').forEach(selector=>selector.addEventListener('change',()=>{
+      const count=[...form.querySelectorAll('select.him-class-select')].filter(s=>s.value).length;
+      const counter=form.querySelector('.him-class-count');
+      if(counter)counter.textContent=`${count} / ${classIds().length} ${tr("Customized")}`;
+    }));
+    form.querySelectorAll('[data-him="testClassFX"]').forEach(button=>button.addEventListener('click',async()=>{
+      try{
+        const token=canvas?.tokens?.controlled?.[0];
+        const classPath=form.querySelector(`select[data-class="${button.dataset.class}"]`)?.value;
+        const path=classPath||form.querySelector('select[name="sequencerPath"]')?.value;
+        if(!path)throw new Error(tr("ChooseAnimation"));
+        await testSequencerFX({token,path,seconds:Number(form.querySelector('input[name="fxSeconds"]').value),scale:Number(form.querySelector('input[name="sequencerScale"]').value)});
+      }catch(err){ui.notifications.warn(err.message);}
+    }));
+    el.querySelector('[data-him="testSequencer"]')?.addEventListener("click",async()=>{
+      try{
+        const token=canvas?.tokens?.controlled?.[0];
+        const path=form.querySelector('select[name="sequencerPath"]')?.value;
+        await testSequencerFX({token,path,seconds:Number(form.querySelector('input[name="fxSeconds"]').value),scale:Number(form.querySelector('input[name="sequencerScale"]').value)});
+      }catch(err){ui.notifications.warn(err.message);}
+    });
     const save=async(sync=false)=>{
       if(!game.user.isGM)return;
       const fd=new FormData(form);
-      const bools=new Set(["attunement","playerProtection","gmDirectEdit","soundEnabled","fxEnabled","attunementCombatLock"]);
-      const nums=new Set(["maxCharges","cost","volume","fxSeconds"]);
-      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","longRestFeatureIds","chatFlavor","playerProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxEnabled","fxPreset","fxSeconds"]){
+      const bools=new Set(["attunement","playerProtection","gmDirectEdit","soundEnabled","attunementCombatLock","managementSubfolders"]);
+      const nums=new Set(["maxCharges","cost","volume","fxSeconds","sequencerScale"]);
+      // Validate before mutating world settings; a failed form must not partially save.
+      const requestedScope=fd.get("managementScope");
+      const requestedFX=fd.get("fxEngine");
+      if(requestedScope==="folder" && game.folders.get(fd.get("managementFolderId"))?.type!=="Actor") throw new Error(tr("ChooseFolder"));
+      if(requestedScope==="group" && game.actors.get(fd.get("managementGroupId"))?.type!=="group") throw new Error(tr("ChooseGroup"));
+      // Keep stored FX paths even if JB2A changes its available assets.
+      // Unavailable class effects gracefully fall back to the global preset.
+      // A missing engine never blocks the GM from saving other settings.
+      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","longRestFeatureIds","chatFlavor","playerProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxPreset","fxSeconds","fxEngine","sequencerPath","sequencerScale","managementScope","managementFolderId","managementGroupId","managementSubfolders"]){
         let val=bools.has(key)?fd.has(key):fd.get(key);
         if(nums.has(key)) val=Number(val);
         if(key==="maxCharges"||key==="cost")val=Math.max(1,num(val,1));
         if(key==="volume")val=Math.max(0,Math.min(1,Number(val)||0));
         if(key==="fxSeconds")val=Math.max(.1,Math.min(3600,Number(val)||5));
-        if(key==="fxEnabled" && !findTMFX())val=get("fxEnabled");
-        if(["fxPreset","fxSeconds"].includes(key) && !findTMFX())val=get(key);
+        if(key==="sequencerScale")val=Math.max(.5,Math.min(4,Number(val)||1.75));
+        if(key==="fxPreset" && !findTMFX())val=get("fxPreset");
+        if(["sequencerPath","sequencerScale"].includes(key) && !freeJB2AAvailable())val=get(key);
+        // Retain the pre-v0.0.4 checkbox only for migration; keep it in sync
+        // so the "None" option really does disable Token Magic FX.
+        if(key==="fxEngine")await game.settings.set(ID,"fxEnabled",val==="tokenmagic");
         await game.settings.set(ID,key,val);
+      }
+      if(freeJB2AAvailable()){
+        const classFX={};
+        for(const cls of classIds()){
+          const selected=String(fd.get(`classFX.${cls}`)||"");
+          if(selected)classFX[cls]=selected;
+        }
+        await game.settings.set(ID,"classFX",classFX);
       }
       if(sync){
         const includeNPCs=form.querySelector('[name="syncNPCs"]').checked;
@@ -154,13 +275,25 @@ export class SettingsWindow extends HIMWindow {
 
 export class ManagerWindow extends HIMWindow {
   static DEFAULT_OPTIONS={id:"him-manager",window:{title:"Heroic Inspiration Manager",resizable:true},position:{width:790,height:660},classes:["him-app"]};
-  selected=new Set(); typeFilter="character"; groupFilter="all";
+  selected=new Set(); typeFilter="character"; groupFilter="all"; searchFilter="";
+  scopeDescription(){
+    const mode=get("managementScope");
+    if(mode==="folder")return `${tr("ActorFolder")}: ${game.folders.get(get("managementFolderId"))?.name||tr("MissingScope")}`;
+    if(mode==="group")return `${tr("ActorGroup")}: ${game.actors.get(get("managementGroupId"))?.name||tr("MissingScope")}`;
+    return tr("AllActorsSource");
+  }
   visibleActors(){
     const members=this.groupFilter==="all"?null:groupMemberIds(game.actors.get(this.groupFilter));
-    return eligibleActors().filter(a=>(this.typeFilter==="all"||a.type===this.typeFilter)&&(!members||members.has(a.id)));
+    return managementActors().filter(a=>(this.typeFilter==="all"||a.type===this.typeFilter)&&(!members||members.has(a.id)) &&
+      (!this.searchFilter || a.name.toLocaleLowerCase().includes(this.searchFilter)));
   }
   async _renderHTML(){
     const all=this.visibleActors();
+    const activeScope=get("managementScope");
+    const scopeTarget=activeScope==="folder"?game.folders.get(get("managementFolderId")):
+      activeScope==="group"?game.actors.get(get("managementGroupId")):null;
+    const scopeText=this.scopeDescription();
+    const selectedVisible=all.filter(a=>this.selected.has(a.id)).length;
     const groups=groupActors().sort((a,b)=>a.name.localeCompare(b.name));
     if(this.groupFilter!=="all" && !groups.some(g=>g.id===this.groupFilter))this.groupFilter="all";
     const rows=all.map(a=>{const s=snapshot(a);
@@ -172,7 +305,9 @@ export class ManagerWindow extends HIMWindow {
     return `<section class="him-manager"><header class="him-row"><p>${esc(tr("SelectActors"))}</p>
       <select name="filter">${[["character",tr("Characters")],["npc",tr("NPCs")],["all",tr("All")]].map(([v,l])=>opt(v,l,this.typeFilter)).join("")}</select>
       <select name="groupFilter" aria-label="${esc(tr("GroupFilter"))}">${[["all",tr("AllGroups")],...groups.map(g=>[g.id,g.name])].map(([v,l])=>opt(v,l,this.groupFilter)).join("")}</select>
+      <input type="search" name="actorSearch" aria-label="${esc(tr("SearchActors"))}" placeholder="${esc(tr("SearchActors"))}" value="${esc(this.searchFilter)}">
       <button data-him="all">${esc(tr("SelectAll"))}</button><button data-him="clear">${esc(tr("Clear"))}</button></header>
+      <p class="him-help him-scope-state">${esc(tr("ActiveScope"))}: <strong>${esc(scopeText)}</strong> · ${all.length} ${esc(tr("VisibleActors"))} · ${selectedVisible} ${esc(tr("SelectedCount"))}</p>
       <div class="him-table-scroll"><table><thead><tr><th></th><th>${esc(tr("Actor"))}</th><th>${esc(tr("Item"))}</th><th>${esc(tr("Charges"))}</th><th>${esc(tr("Status"))}</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="6">${esc(tr("NoActors"))}</td></tr>`}</tbody></table></div>
       <footer><label>${esc(tr("Amount"))} <input name="amount" type="number" min="0" step="1" value="1"></label>
       <button data-him="install"><i class="fas fa-box"></i> ${esc(tr("ApplyItem"))}</button>
@@ -184,6 +319,14 @@ export class ManagerWindow extends HIMWindow {
   bind(el){
     el.querySelector('select[name="filter"]').addEventListener("change",e=>{this.typeFilter=e.target.value;this.selected.clear();this.render();});
     el.querySelector('select[name="groupFilter"]').addEventListener("change",e=>{this.groupFilter=e.target.value;this.selected.clear();this.render();});
+    el.querySelector('input[name="actorSearch"]')?.addEventListener("input",e=>{
+      this.searchFilter=e.target.value.toLocaleLowerCase().trim();this.selected.clear();
+      const visibleIds=new Set(this.visibleActors().map(a=>a.id));
+      el.querySelectorAll("tbody tr").forEach(row=>{const box=row.querySelector("input.him-select");if(box)row.hidden=!visibleIds.has(box.dataset.actor);});
+      const count=el.querySelector(".him-scope-state");
+      if(count)count.textContent=`${tr("ActiveScope")}: ${this.scopeDescription()} · ${visibleIds.size} ${tr("VisibleActors")} · 0 ${tr("SelectedCount")}`;
+      el.querySelectorAll("input.him-select").forEach(box=>box.checked=false);
+    });
     el.querySelectorAll(".him-select").forEach(c=>c.addEventListener("change",e=>{e.target.checked?this.selected.add(e.target.dataset.actor):this.selected.delete(e.target.dataset.actor);}));
     el.querySelectorAll("button[data-him]").forEach(button=>button.addEventListener("click",async()=>{
       const action=button.dataset.him;

@@ -227,7 +227,7 @@ Hooks.once("ready",()=>{
   if(game.system.id!=="dnd5e")return;
   const v=game.system.version;
   const expected=foundry.utils.isNewerVersion(v,"6.0.0")?"D&D5e 6.x":"D&D5e 5.2.x";
-  log(`v0.0.3 ready on Foundry ${game.version}, ${expected} (${v}).`);
+  log(`v0.0.4 ready on Foundry ${game.version}, ${expected} (${v}).`);
   installActivityGate();
   setupRestGrants();
   observeActorDirectory();

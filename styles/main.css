@@ -33,3 +33,25 @@
 .him-manager select[name="groupFilter"]{min-width:165px;max-width:250px;flex:1;}
 /* The directory control belongs in its header, directly preceding search. */
 .directory-header > .him-directory-btn{width:calc(100% - 10px);flex:0 0 auto;order:0;}
+
+/* v0.0.4: Actor source and optional Sequencer controls */
+.him-app [hidden]{display:none !important;}
+.him-app [data-him-source],.him-app [data-him-engine]{display:flex;flex-direction:column;gap:7px;}
+.him-app .him-scope-state{margin:0;padding:6px 8px;border:1px solid var(--him-border);border-radius:5px;}
+.him-app input[name="actorSearch"]{width:155px;min-height:30px;}
+.him-app .him-fx-settings{padding:6px 8px;border-left:2px solid var(--him-border);}
+.him-app .him-field:has(input[type="search"]){min-width:0;}
+.him-app select[name="sequencerPath"]{max-width:100%;}
+
+/* Class-specific Sequencer FX stays collapsed until the GM expands it. */
+.him-class-fx {margin:.6rem 0; border:1px solid var(--color-border-light-primary,#777); border-radius:5px;}
+.him-class-fx summary {padding:.65rem .75rem; cursor:pointer; font-weight:600; display:flex; gap:.5rem; align-items:center;}
+.him-class-fx summary::marker {content:"";}
+.him-class-fx summary::-webkit-details-marker {display:none;}
+.him-class-fx[open] summary i {transform:rotate(90deg);}
+.him-class-count {margin-left:auto; font-weight:400; opacity:.7; font-size:.82em;}
+.him-class-inner {padding:.5rem .75rem 1rem;}
+.him-class-row {display:grid; grid-template-columns:minmax(84px,1fr) minmax(150px,2.4fr) 30px; align-items:center; gap:.5rem; margin:.35rem 0;}
+.him-class-row select {min-width:0; width:100%;}
+.him-class-row button {padding:.35rem; min-width:28px;}
+.him-class-fx[data-disabled] {opacity:.65;}
