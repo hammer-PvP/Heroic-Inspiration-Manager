@@ -1,4 +1,4 @@
-/** Heroic Inspiration Manager v0.0.4 — system-agnostic UI, D&D5e-native item uses. */
+/** Heroic Inspiration Manager v0.1.0 — system-agnostic UI, D&D5e-native item uses. */
 export const ID = "heroic-inspiration-manager";
 export const ACTIVITY_ID = "himInspireUse001";
 export const log = (...args) => console.log(`[${ID}]`, ...args);
@@ -93,7 +93,7 @@ export function registerSettings(menuApp) {
     longRestFeatureIds: [String,"resourceful"],
     attunementCombatLock: [Boolean,true],
     fxEngine: [String,"none"], sequencerPath: [String,""], sequencerScale: [Number,1.75],
-    classFX: [Object,{}],
+    classFX: [Object,{}], multiclassFXMode: [String,"highest"],
     managementScope: [String,"all"], managementFolderId: [String,""],
     managementGroupId: [String,""], managementSubfolders: [Boolean,true]
   };
@@ -129,7 +129,7 @@ function desiredItemData(balance=0) {
       properties:get("attunement") ? ["mgc"] : [],
       uses:{max:String(max),spent,recovery},activities:{[ACTIVITY_ID]:activitySource()},
       description:{value:`<p>${escapeHTML(tr("ItemDescription"))}</p>`}},
-    flags:{[ID]:{managed:true,version:"0.0.4"}}
+    flags:{[ID]:{managed:true,version:"0.1.0"}}
   };
 }
 

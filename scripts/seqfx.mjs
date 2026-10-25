@@ -41,17 +41,35 @@ const VFX_WORDS=/(aura|bless|healing|heal|inspiration|divine|smite|cast_shape|ca
 // Prioritize on-token and cinematic effects; the search still accesses all free entries.
 export const highlightedPaths=(paths)=>paths.filter(x=>VFX_WORDS.test(x));
 
-/** Highest-level mapped class wins. Tie-break alphabetically for deterministic behavior. */
-export function resolveClassFX(actor,overrides=get("classFX")) {
+/** Return the class whose FX should be considered. The D&D5e character's
+ * system.details.originalClass stores the embedded class Item id, not a name.
+ * Never guess the starting class from embedded Item order.
+ */
+export function selectedFXClass(actor,mode=get("multiclassFXMode")) {
+  const classes=(actor?.items?.filter?.(item=>item.type==="class")??[]).map(item=>({
+    id:item.id??item._id, identifier:String(item.system?.identifier??"").trim().toLowerCase(),
+    levels:Math.max(0,Number(item.system?.levels)||0)
+  }));
+  const originalId=String(actor?.system?.details?.originalClass??"");
+  const original=classes.find(c=>c.id===originalId);
+  if(mode==="starting")return original?.identifier&&CLASS_IDS.includes(original.identifier)?original.identifier:"";
+  if(!classes.length)return "";
+  classes.sort((a,b)=>b.levels-a.levels || Number(b.id===originalId)-Number(a.id===originalId) || a.identifier.localeCompare(b.identifier));
+  const highest=classes[0];
+  return CLASS_IDS.includes(highest.identifier)?highest.identifier:"";
+}
+
+/** Choose the class first. Missing/unavailable override falls back straight
+ * to Global; never search a secondary class merely because it has an effect.
+ */
+export function resolveClassFX(actor,overrides=get("classFX"),mode=get("multiclassFXMode")) {
   const effects=overrides && typeof overrides==="object"&&!Array.isArray(overrides)?overrides:{};
-  const mapped=(actor?.items?.filter?.(item=>item.type==="class")??[])
-    .map(item=>({identifier:String(item.system?.identifier??"").trim().toLowerCase(),
-      levels:Math.max(0,Number(item.system?.levels)||0)}))
-    .filter(c=>CLASS_IDS.includes(c.identifier) && typeof effects[c.identifier]==="string" && effects[c.identifier]);
-  mapped.sort((a,b)=>b.levels-a.levels||a.identifier.localeCompare(b.identifier));
   const available=new Set(freeJB2APaths());
-  const classChoice=mapped.find(c=>available.has(effects[c.identifier]));
-  return classChoice?effects[classChoice.identifier]:available.has(get("sequencerPath"))?get("sequencerPath"):"";
+  const chosenClass=selectedFXClass(actor,mode);
+  const classPath=chosenClass?effects[chosenClass]:"";
+  if(typeof classPath==="string" && available.has(classPath))return classPath;
+  const globalPath=get("sequencerPath");
+  return available.has(globalPath)?globalPath:"";
 }
 
 function fxDuration(value){

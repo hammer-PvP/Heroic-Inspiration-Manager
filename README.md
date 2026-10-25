@@ -1,11 +1,11 @@
 # Heroic Inspiration Manager
 
-**Version 0.0.4** — An independent D&D5e Foundry VTT module for managing Heroic Inspiration charges through a managed Equipment/Trinket Item, native Item Uses, and a Utility Activity.
+**Version 0.1.0** — An independent D&D5e Foundry VTT module for managing Heroic Inspiration charges through a managed Equipment/Trinket Item, native Item Uses, and a Utility Activity.
 
 ## Supported target installations
 
 - Foundry VTT 13.351 / D&D5e 5.2.5 — confirmed working by the author in v0.0.3
-- Foundry VTT 14.369 / D&D5e 6.0.6 — confirmed working by the author in v0.0.3; v0.0.4 additions require validation
+- Foundry VTT 14.369 / D&D5e 6.0.6 — confirmed working by the author in v0.0.3; v0.1.0 additions require validation
 
 Token Magic FX and Sequencer + free JB2A are entirely optional. The module does not require Character Builder.
 
@@ -23,17 +23,24 @@ For manual installation, copy the release ZIP's contents into `Data/modules/hero
 2. Open its **Settings**, set Item name, maximum charges (fixed or unlimited accumulation), cost per use, Equipped/Attunement requirements, and optional Long Rest recovery, sound, or Token Magic FX.
 3. Choose an Item image with the built-in **Browse / Upload** button, or **Restore Default**.
 4. Set the **Manager Actor Source** to All, an Actor Directory folder (with optional subfolders), or a native D&D5e Group Actor. These settings constrain only the Manager grid, not world-wide Item synchronization.
-5. Optionally select a visual FX engine: **None**, **Token Magic FX**, or **Sequencer + JB2A Free**. If using Sequencer, install both the Sequencer module and **JB2A - Free Content**, then search the installed free animations, choose the desired database entry, scale and duration, and test it on a selected canvas Token. No animations are included in this ZIP.
+5. Optionally select a visual FX engine: **None**, **Token Magic FX**, or **Sequencer + JB2A Free**. If using Sequencer, install both the Sequencer module and **JB2A - Free Content**, then use **Browse** to search the entire installed free JB2A library, filter, preview and confirm a Database path. Choose scale and duration, and test playback on a selected canvas Token. No animations are included in this ZIP.
 6. Click **Save and create/sync items** to install missing managed Items for Characters (NPCs optional) and update existing Items without clearing balances.
 7. Open **Heroic Inspiration Manager** from the Actors Directory (above Search Actors) or the Settings button.
 8. Filter by Actor Type, native D&D5e **Group Actor**, and/or Actor name within the chosen source, then Apply Item, Grant, Revoke, or Set Exact. Selection is cleared on filter changes to prevent unintended batch edits.
 9. Players may consume via the Item Activity or via the character sheet Inspiration star. Both refer to the same Item Uses balance. Native Activity use posts a chat declaration.
 
-### Class-specific Sequencer effects
+### JB2A effect browser and multiclass selection
 
-When **Sequencer + JB2A Free** is selected, choose a **Global FX** and optionally expand the **Class-specific FX** section. The 12 core D&D5e classes each default to **Use Global**. A configured class animation overrides the global effect. Multiclass characters use the highest-level configured class; ties are alphabetical. Unknown classes and unavailable choices fall back to the global animation.
+The **Browse** button on the Global FX field and on each of the twelve class rows opens the same standalone JB2A browser based on the approved CTN v1.1.15 selector. This changes only effect selection, not grants, FX timing, or playback.
 
-Use **Test FX** on a selected canvas Token to preview a class or global effect without granting charges, playing a grant sound, or changing Item Uses. Options are loaded dynamically from the installed free JB2A library; no JB2A animations are redistributed.
+- The browser retrieves actual installed **free** `jb2a.*` Sequencer Database paths, searches all of them and combines five facets: Category, Color, Shape, Variation and Distance. Each facet defaults to **All**, retaining entries with unknown attributes.
+- The filtered results paginate at **100 per page**, with first/previous/next/last controls and a 48 px direct page field.
+- Selecting a row plays a **local animated preview within the browser** when a compatible media URL is available. A preview failure does not prevent confirming the database path.
+- **Confirm** copies only the selected `jb2a.*` path into the appropriate settings field. **Cancel** does not change that field. Persist settings with the usual **Save** button; no Token, Scene, socket or grant is used by the browser.
+- The Global field is the fallback. Each class has its own Browse, clear-to-Global and Test FX controls. The twelve-class section stays **collapsed by default**.
+- The compact **Efx from :** selector chooses `Highest Class Level` (default) or `Starting Class`. The latter uses D&D5e `actor.system.details.originalClass` (an embedded class Item ID). Highest Class Level compares class levels; ties prefer the original class, then alphabetical order. **One class** is chosen before looking up an effect; an absent/unrecognized class, missing override or unavailable asset falls directly back to the Global FX (not another class).
+
+**Test FX** (outside the browser) plays on the GM's selected Token, without granting charges, playing reward audio or updating Item Uses. This is separate from the browser's private media preview. Neither the free JB2A assets nor CTN Tile functionality are embedded in this module.
 
 ## Human 2024 Resourceful / Long Rest
 
@@ -67,9 +74,3 @@ With the default setting **Long Rest feature identifiers: `resourceful`**, after
 - Release ZIP filename (always unversioned): `heroic-inspiration-manager.zip`.
 
 For the Foundry official package catalogue, the **author** must review and approve the submitted user-facing strings, description, localization and any promotional materials for compliance with the applicable Foundry AI Content Policy. A technically valid manifest is not approval from the Foundry team. The author remains responsible for understanding the code and meeting the published terms of submission.
-
-### Class-specific Sequencer effects
-
-When **Sequencer + JB2A Free** is selected, choose a **Global FX** and optionally expand the **Class-specific FX** section. The 12 core D&D5e classes each default to **Use Global**. A configured class animation overrides the global effect. Multiclass characters use the highest-level configured class; ties are alphabetical. Unknown classes and unavailable choices fall back to the global animation.
-
-Use **Test FX** on a selected canvas Token to preview a class or global effect without granting charges, playing a grant sound, or changing Item Uses. Options are loaded dynamically from the installed free JB2A library; no JB2A animations are redistributed.

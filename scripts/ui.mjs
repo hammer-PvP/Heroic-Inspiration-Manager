@@ -1,5 +1,6 @@
 import {ID,tr,get,num,escapeHTML,findTMFX,eligibleActors,snapshot,reconcile,adjust,celebrate,isUnlimited,configuredMax,groupActors,groupMemberIds,actorFolders,managementActors} from "./core.mjs";
-import {freeJB2AAvailable,freeJB2APaths,highlightedPaths,testSequencerFX,classIds} from "./seqfx.mjs";
+import {freeJB2AAvailable,freeJB2APaths,testSequencerFX,classIds} from "./seqfx.mjs";
+import {openJB2ABrowser} from "./jb2a-effect-browser.mjs";
 const AppV2=foundry.applications.api.ApplicationV2;
 const esc=escapeHTML;
 const opt=(value,label,selected)=>`<option value="${esc(value)}" ${selected===value?"selected":""}>${esc(label)}</option>`;
@@ -26,12 +27,9 @@ export class SettingsWindow extends HIMWindow {
     const folders=actorFolders().sort((a,b)=>a.name.localeCompare(b.name));
     const groups=groupActors().sort((a,b)=>a.name.localeCompare(b.name));
     const managementScope=get("managementScope");
-    const featured=highlightedPaths(installedPaths);
     const chosen=get("sequencerPath");
-    const shown=[...new Set([chosen,...featured.slice(0,220)].filter(Boolean))];
     const classOverrides=get("classFX")??{};
     const classes=classIds();
-    const classChoices=[...new Set([...Object.values(classOverrides),...featured.slice(0,160)].filter(Boolean))];
     const configuredCount=classes.filter(id=>classOverrides[id]).length;
     return `<form class="him-settings-form"><h3>${esc(tr("ItemConfig"))}</h3>
       ${field("itemName",tr("ItemName"),get("itemName"))}
@@ -82,20 +80,32 @@ export class SettingsWindow extends HIMWindow {
         ${fxOK?"":`<p class="him-help">${esc(tr("FXMissing"))} <a target="_blank" rel="noopener noreferrer" href="https://foundryvtt.com/packages/tokenmagic">Token Magic FX ↗</a></p>`}
       </div>
       <div class="him-fx-settings ${seqOK?"":"him-disabled"}" data-him-engine="sequencer" ${fxEngine==="sequencer"?"":"hidden"}>
-        ${seqOK?`<label class="him-field"><span>${esc(tr("AnimationSearch"))}</span><input name="animationSearch" type="search" placeholder="${esc(tr("AnimationSearchHint"))}"></label>`:""}
-        ${select("sequencerPath",tr("JB2AAnimation"),[["",tr("ChooseAnimation")],...shown.map(v=>[v,v.replace(/^jb2a\./,"").replaceAll("."," / ")])],chosen,!seqOK)}
+        <div class="him-effect-picker"><label for="him-global-path">${esc(tr("JB2AAnimation"))}</label>
+          <input id="him-global-path" name="sequencerPath" type="text" readonly value="${esc(chosen)}" placeholder="${esc(tr("ChooseAnimation"))}" title="${esc(chosen)}">
+          <button type="button" data-him="browseSequencer" ${seqOK?"":"disabled"}><i class="fas fa-search"></i> ${esc(tr("BrowseJB2A"))}</button>
+          <button type="button" data-him="clearSequencer" ${seqOK?"":"disabled"} title="${esc(tr("ClearFX"))}"><i class="fas fa-times"></i></button>
+        </div>
         ${field("sequencerScale",tr("AnimationScale"),get("sequencerScale"),"number",`min=0.5 max=4 step=0.05 ${seqOK?"":"disabled"}`)}
         ${seqOK?`<p class="him-help">${esc(tr("FreeJB2AOnly"))} (${installedPaths.length})</p><div class="him-row"><button type="button" data-him="testSequencer">${esc(tr("TestFX"))}</button></div>`:
           `<p class="him-help">${esc(tr("SequencerMissing"))} <a href="https://foundryvtt.com/packages/sequencer" target="_blank" rel="noopener noreferrer">Sequencer ↗</a> · <a href="https://foundryvtt.com/packages/JB2A_DnD5e" target="_blank" rel="noopener noreferrer">JB2A Free ↗</a></p>`}
+        <div class="him-multiclass-policy"><label for="him-multiclass-policy">Efx from :</label>
+          <select id="him-multiclass-policy" name="multiclassFXMode" aria-label="Efx from :">
+            ${opt("highest", "Highest Class Level",get("multiclassFXMode"))}
+            ${opt("starting", "Starting Class",get("multiclassFXMode"))}
+          </select>
+        </div>
         <details class="him-class-fx" ${seqOK?"":"data-disabled"}>
           <summary><i class="fas fa-chevron-right"></i> ${esc(tr("ClassFX"))} <span class="him-class-count">${configuredCount} / ${classes.length} ${esc(tr("Customized"))}</span></summary>
           <div class="him-class-inner">
             <p class="him-help">${esc(tr("ClassFXHint"))}</p>
-            ${seqOK?`<label class="him-field"><span>${esc(tr("ClassAnimationSearch"))}</span><input name="classAnimationSearch" type="search" placeholder="${esc(tr("AnimationSearchHint"))}"></label>`:""}
-            ${classes.map(id=>`<div class="him-class-row"><label for="him-class-${esc(id)}">${esc(tr("Class_"+id))}</label><select id="him-class-${esc(id)}" name="classFX.${esc(id)}" class="him-class-select" data-class="${esc(id)}" ${seqOK?"":"disabled"}>
-              ${opt("",tr("UseGlobal"),classOverrides[id]||"")}
-              ${classChoices.map(path=>opt(path,path.replace(/^jb2a\./,"").replaceAll("."," / "),classOverrides[id]||"")).join("")}
-            </select><button type="button" data-him="testClassFX" data-class="${esc(id)}" ${seqOK?"":"disabled"} title="${esc(tr("TestClassFX"))}"><i class="fas fa-play"></i></button></div>`).join("")}
+            ${classes.map(id=>`<div class="him-class-row">
+              <label for="him-class-${esc(id)}">${esc(tr("Class_"+id))}</label>
+              <input id="him-class-${esc(id)}" type="text" readonly name="classFX.${esc(id)}" class="him-class-select" data-class="${esc(id)}"
+                value="${esc(classOverrides[id]||"")}" placeholder="${esc(tr("UseGlobal"))}" title="${esc(classOverrides[id]||tr("UseGlobal"))}" ${seqOK?"":"disabled"}>
+              <button type="button" data-him="browseClassFX" data-class="${esc(id)}" ${seqOK?"":"disabled"} title="${esc(tr("BrowseJB2A"))}"><i class="fas fa-search"></i></button>
+              <button type="button" data-him="clearClassFX" data-class="${esc(id)}" ${seqOK?"":"disabled"} title="${esc(tr("UseGlobal"))}"><i class="fas fa-times"></i></button>
+              <button type="button" data-him="testClassFX" data-class="${esc(id)}" ${seqOK?"":"disabled"} title="${esc(tr("TestClassFX"))}"><i class="fas fa-play"></i></button>
+            </div>`).join("")}
           </div>
         </details>
       </div>
@@ -165,38 +175,56 @@ export class SettingsWindow extends HIMWindow {
         node.hidden=node.dataset.himEngine==="timing" ? engineSelect.value==="none" : node.dataset.himEngine!==engineSelect.value;
       });
     });
-    const animSearch=form.querySelector('input[name="animationSearch"]');
-    animSearch?.addEventListener("input",()=>{
-      const v=animSearch.value.trim().toLowerCase();
-      const selector=form.querySelector('select[name="sequencerPath"]');
-      const selected=selector.value;
-      const paths=v?installedSearch(installedList,v):highlightedList(installedList);
-      const shown=[...new Set([selected,...paths.slice(0,350)].filter(Boolean))];
-      selector.innerHTML=`<option value="">${esc(tr("ChooseAnimation"))}</option>`+shown.map(x=>opt(x,x.replace(/^jb2a\./,"").replaceAll("."," / "),selected)).join("");
-    });
-    function installedList(){return freeJB2APaths();}
-    function installedSearch(all,term){return all().filter(p=>p.toLowerCase().includes(term));}
-    function highlightedList(all){return highlightedPaths(all());}
-    const classSearch=form.querySelector('input[name="classAnimationSearch"]');
-    classSearch?.addEventListener("input",()=>{
-      const q=classSearch.value.trim().toLowerCase();
-      const choices=q?freeJB2APaths().filter(x=>x.toLowerCase().includes(q)).slice(0,200):highlightedPaths(freeJB2APaths()).slice(0,160);
-      form.querySelectorAll("select.him-class-select").forEach(selector=>{
-        const selected=selector.value;
-        const paths=[...new Set([selected,...choices].filter(Boolean))];
-        selector.innerHTML=opt("",tr("UseGlobal"),selected)+paths.map(path=>opt(path,path.replace(/^jb2a\./,"").replaceAll("."," / "),selected)).join("");
-      });
-    });
-    form.querySelectorAll('select.him-class-select').forEach(selector=>selector.addEventListener('change',()=>{
-      const count=[...form.querySelectorAll('select.him-class-select')].filter(s=>s.value).length;
+    // JB2A selection changes only the corresponding form value; it is persisted
+    // by the existing Save / Save and Sync action. Cancel leaves it untouched.
+    const browserLabels={
+      Browse:tr("BrowserTitle"), All:tr("BrowserAll"), Search:tr("BrowserSearch"),
+      FilterCategory:tr("BrowserCategory"), FilterColor:tr("BrowserColor"),
+      FilterFormat:tr("BrowserShape"), FilterVariation:tr("BrowserVariation"),
+      FilterDistance:tr("BrowserDistance"), Preview:tr("BrowserPreview"),
+      ChoosePreview:tr("BrowserChoosePreview"), LoadingPreview:tr("BrowserLoadingPreview"),
+      PreviewUnavailable:tr("BrowserPreviewUnavailable"), NoEffects:tr("BrowserNoEffects"),
+      NoMatches:tr("BrowserNoMatches"), Results:tr("BrowserResults"),
+      FirstPage:tr("BrowserFirst"), PreviousPage:tr("BrowserPrevious"),
+      NextPage:tr("BrowserNext"), LastPage:tr("BrowserLast"),
+      PageNavigation:tr("BrowserPageNavigation"), PageNumber:tr("BrowserPageNumber"),
+      GoPage:tr("BrowserGo"), CancelEditor:tr("BrowserCancel"), ConfirmEffect:tr("BrowserConfirm")
+    };
+    const updateClassCount=()=>{
+      const inputs=[...form.querySelectorAll('input.him-class-select')];
+      const count=inputs.filter(input=>input.value).length;
       const counter=form.querySelector('.him-class-count');
       if(counter)counter.textContent=`${count} / ${classIds().length} ${tr("Customized")}`;
+    };
+    const browse=(input)=>{
+      if(!input||!freeJB2AAvailable())return ui.notifications.warn(tr("SequencerMissing"));
+      openJB2ABrowser({
+        current:input.value,labels:browserLabels,pageSize:100,paths:freeJB2APaths(),
+        onChoose:(path)=>{
+          input.value=path;
+          input.title=path;
+          input.dispatchEvent(new Event("change",{bubbles:true}));
+          updateClassCount();
+        }
+      });
+    };
+    form.querySelector('[data-him="browseSequencer"]')?.addEventListener("click",()=>browse(form.querySelector('input[name="sequencerPath"]')));
+    form.querySelector('[data-him="clearSequencer"]')?.addEventListener("click",()=>{
+      const input=form.querySelector('input[name="sequencerPath"]');
+      input.value="";input.title="";
+    });
+    form.querySelectorAll('[data-him="browseClassFX"]').forEach(button=>button.addEventListener("click",()=>{
+      browse(form.querySelector(`input.him-class-select[data-class="${button.dataset.class}"]`));
+    }));
+    form.querySelectorAll('[data-him="clearClassFX"]').forEach(button=>button.addEventListener("click",()=>{
+      const input=form.querySelector(`input.him-class-select[data-class="${button.dataset.class}"]`);
+      if(input){input.value="";input.title=tr("UseGlobal");updateClassCount();}
     }));
     form.querySelectorAll('[data-him="testClassFX"]').forEach(button=>button.addEventListener('click',async()=>{
       try{
         const token=canvas?.tokens?.controlled?.[0];
-        const classPath=form.querySelector(`select[data-class="${button.dataset.class}"]`)?.value;
-        const path=classPath||form.querySelector('select[name="sequencerPath"]')?.value;
+        const classPath=form.querySelector(`input.him-class-select[data-class="${button.dataset.class}"]`)?.value;
+        const path=classPath||form.querySelector('input[name="sequencerPath"]')?.value;
         if(!path)throw new Error(tr("ChooseAnimation"));
         await testSequencerFX({token,path,seconds:Number(form.querySelector('input[name="fxSeconds"]').value),scale:Number(form.querySelector('input[name="sequencerScale"]').value)});
       }catch(err){ui.notifications.warn(err.message);}
@@ -204,7 +232,7 @@ export class SettingsWindow extends HIMWindow {
     el.querySelector('[data-him="testSequencer"]')?.addEventListener("click",async()=>{
       try{
         const token=canvas?.tokens?.controlled?.[0];
-        const path=form.querySelector('select[name="sequencerPath"]')?.value;
+        const path=form.querySelector('input[name="sequencerPath"]')?.value;
         await testSequencerFX({token,path,seconds:Number(form.querySelector('input[name="fxSeconds"]').value),scale:Number(form.querySelector('input[name="sequencerScale"]').value)});
       }catch(err){ui.notifications.warn(err.message);}
     });
@@ -221,15 +249,16 @@ export class SettingsWindow extends HIMWindow {
       // Keep stored FX paths even if JB2A changes its available assets.
       // Unavailable class effects gracefully fall back to the global preset.
       // A missing engine never blocks the GM from saving other settings.
-      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","longRestFeatureIds","chatFlavor","playerProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxPreset","fxSeconds","fxEngine","sequencerPath","sequencerScale","managementScope","managementFolderId","managementGroupId","managementSubfolders"]){
+      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","longRestFeatureIds","chatFlavor","playerProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxPreset","fxSeconds","fxEngine","sequencerPath","sequencerScale","multiclassFXMode","managementScope","managementFolderId","managementGroupId","managementSubfolders"]){
         let val=bools.has(key)?fd.has(key):fd.get(key);
         if(nums.has(key)) val=Number(val);
         if(key==="maxCharges"||key==="cost")val=Math.max(1,num(val,1));
         if(key==="volume")val=Math.max(0,Math.min(1,Number(val)||0));
         if(key==="fxSeconds")val=Math.max(.1,Math.min(3600,Number(val)||5));
         if(key==="sequencerScale")val=Math.max(.5,Math.min(4,Number(val)||1.75));
+        if(key==="multiclassFXMode")val=val==="starting"?"starting":"highest";
         if(key==="fxPreset" && !findTMFX())val=get("fxPreset");
-        if(["sequencerPath","sequencerScale"].includes(key) && !freeJB2AAvailable())val=get(key);
+        if(["sequencerPath","sequencerScale","multiclassFXMode"].includes(key) && !freeJB2AAvailable())val=get(key);
         // Retain the pre-v0.0.4 checkbox only for migration; keep it in sync
         // so the "None" option really does disable Token Magic FX.
         if(key==="fxEngine")await game.settings.set(ID,"fxEnabled",val==="tokenmagic");

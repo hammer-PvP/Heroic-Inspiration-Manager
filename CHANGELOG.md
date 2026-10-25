@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.0 (2026-10-24)
+
+- Replace limited JB2A selects with the approved CTN-style independent effect browser: full text search, Category/Color/Shape/Variation/Distance facets (All by default), 100-per-page pagination, direct page access and private animated preview.
+- Add an explicit **Confirm / Cancel** selection step for both Global FX and each of the 12 class overrides. The picker returns only an installed free JB2A Database path; no Tile or Canvas logic is imported.
+- Add compact **Efx from :** selector with `Highest Class Level` as default and `Starting Class` as an option, reading the D&D5e original-class Item ID; apply a strict Global fallback after choosing a single class.
+- Preserve the original Sequencer playback, class FX testing, Token Magic FX, sound, Actor management and Item/Long Rest behavior.
+- Keep optional FX modules optional, include no third-party animation assets, and maintain stable GitHub latest release filenames.
+
 ## v0.0.4 (2026-10-23)
 
 - Add optional **Sequencer + free JB2A** visual effects for GM-granted Heroic Inspiration, with a dynamically discovered, searchable list of installed free JB2A database animations, scale and duration controls, and test playback.

@@ -1,8 +1,8 @@
 {
   "id": "heroic-inspiration-manager",
   "title": "Heroic Inspiration Manager",
-  "description": "Manage Heroic Inspiration charges, native Activity use, GM batch grants and optional Token Magic FX or Sequencer + free JB2A celebrations for D&D5e.",
-  "version": "0.0.4",
+  "description": "Manage Heroic Inspiration through native D&D5e Item Uses, a GM Manager, and optional Token Magic FX or Sequencer + free JB2A effects with an advanced animated effect browser.",
+  "version": "0.1.0",
   "authors": [
     {
       "name": "hammer-PvP",
@@ -46,7 +46,8 @@
     "scripts/main.mjs"
   ],
   "styles": [
-    "styles/main.css"
+    "styles/main.css",
+    "styles/jb2a-effect-browser.css"
   ],
   "languages": [
     {
