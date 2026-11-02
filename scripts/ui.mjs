@@ -62,6 +62,8 @@ export class SettingsWindow extends HIMWindow {
       <p class="him-help">${esc(tr("ManagementScopeHint"))}</p>
       <h3>${esc(tr("Protection"))}</h3>
       ${toggle("playerProtection",tr("ProtectPlayer"),get("playerProtection"))}
+      ${select("deletionProtection",tr("DeletionProtection"),[["strict",tr("DeletionStrict")],["sheet",tr("DeletionSheetOnly")]],get("deletionProtection"))}
+      <p class="him-help">${esc(tr("DeletionProtectionHint"))}</p>
       ${toggle("gmDirectEdit",tr("GMDirect"),get("gmDirectEdit"))}
       ${toggle("attunementCombatLock",tr("CombatLock"),get("attunementCombatLock"))}
       <h3>${esc(tr("GrantEffects"))}</h3>
@@ -249,13 +251,14 @@ export class SettingsWindow extends HIMWindow {
       // Keep stored FX paths even if JB2A changes its available assets.
       // Unavailable class effects gracefully fall back to the global preset.
       // A missing engine never blocks the GM from saving other settings.
-      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","longRestFeatureIds","chatFlavor","playerProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxPreset","fxSeconds","fxEngine","sequencerPath","sequencerScale","multiclassFXMode","managementScope","managementFolderId","managementGroupId","managementSubfolders"]){
+      for(const key of ["itemName","icon","maxMode","maxCharges","cost","attunement","recovery","recoveryFormula","longRestFeatureIds","chatFlavor","playerProtection","deletionProtection","gmDirectEdit","attunementCombatLock","soundEnabled","soundFile","volume","fxPreset","fxSeconds","fxEngine","sequencerPath","sequencerScale","multiclassFXMode","managementScope","managementFolderId","managementGroupId","managementSubfolders"]){
         let val=bools.has(key)?fd.has(key):fd.get(key);
         if(nums.has(key)) val=Number(val);
         if(key==="maxCharges"||key==="cost")val=Math.max(1,num(val,1));
         if(key==="volume")val=Math.max(0,Math.min(1,Number(val)||0));
         if(key==="fxSeconds")val=Math.max(.1,Math.min(3600,Number(val)||5));
         if(key==="sequencerScale")val=Math.max(.5,Math.min(4,Number(val)||1.75));
+        if(key==="deletionProtection")val=val==="strict"?"strict":"sheet";
         if(key==="multiclassFXMode")val=val==="starting"?"starting":"highest";
         if(key==="fxPreset" && !findTMFX())val=get("fxPreset");
         if(["sequencerPath","sequencerScale","multiclassFXMode"].includes(key) && !freeJB2AAvailable())val=get(key);

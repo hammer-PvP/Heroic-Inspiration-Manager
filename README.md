@@ -1,11 +1,11 @@
 # Heroic Inspiration Manager
 
-**Version 0.1.0** — An independent D&D5e Foundry VTT module for managing Heroic Inspiration charges through a managed Equipment/Trinket Item, native Item Uses, and a Utility Activity.
+**Version 0.1.1** — An independent D&D5e Foundry VTT module for managing Heroic Inspiration charges through a managed Equipment/Trinket Item, native Item Uses, and a Utility Activity.
 
 ## Supported target installations
 
 - Foundry VTT 13.351 / D&D5e 5.2.5 — confirmed working by the author in v0.0.3
-- Foundry VTT 14.369 / D&D5e 6.0.6 — confirmed working by the author in v0.0.3; v0.1.0 additions require validation
+- Foundry VTT 14.369 / D&D5e 6.0.6 — confirmed working by the author in v0.0.3; v0.1.0/0.1.1 additions require validation
 
 Token Magic FX and Sequencer + free JB2A are entirely optional. The module does not require Character Builder.
 
@@ -51,6 +51,15 @@ With the default setting **Long Rest feature identifiers: `resourceful`**, after
 - Grant processing runs on the active GM (or asks the active GM over Foundry's module socket when the player completes the rest). A GM must be online for player-initiated grants.
 - The D&D5e `restCompleted` / `preLongRest` hooks are used; restoration through nonstandard third-party rest replacements requires an integration test.
 - Granting does not play the GM's manual-grant sound/FX.
+
+## Player deletion protection (v0.1.1)
+
+In **Settings → Editing restrictions**, the separate **Item deletion protection** dropdown has two modes (provided **Block players from editing managed charges and properties** remains enabled):
+
+- **Sheet Only (default)**: disable/hide the delete action for the managed Heroic Inspiration Item in D&D5e character and Item sheets, and remove its native Delete context-menu option. A Foundry `preDeleteItem` hook **does not prevent** programmatic deletion by a Player, including Character Builder, Plutonium, other modules, macros or console commands. This is an intentional, user-requested compatibility trade-off, **not a secure Player-permission boundary**.
+- **Strict**: retain the previous `preDeleteItem` protection against all Player-initiated deletions, regardless of origin; this can interfere with third-party inventory rebuilding. GM direct-edit settings are unchanged.
+
+Both modes retain the existing `preUpdateItem` restriction on direct charge/property modifications, normal Item use, equip and attunement rules, and Manager/FX features. A world-wide Setting change applies without migrating or recreating Items. A script that deletes and recreates Items must preserve IDs and state itself; this module cannot guarantee correct balances or rollbacks for external transactions. The guard covers D&D5e native UI; third-party sheets with custom actions may need their own integration.
 
 ## Safety and limitations
 

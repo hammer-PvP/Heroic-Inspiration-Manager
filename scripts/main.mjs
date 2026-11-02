@@ -1,6 +1,7 @@
 import { ID, ACTIVITY_ID, tr, get, num, registerSettings, isManaged, managedItem, charges,
   chargeCost, canUse, mirrorInspiration, useFromStar, restGrantSources, adjust, log } from "./core.mjs";
 import { SettingsWindow, ManagerWindow } from "./ui.mjs";
+import { installSheetDeletionGuard } from "./sheet-deletion-guard.mjs";
 
 const activeUses=new Set();
 const inFlight=new Set();
@@ -227,16 +228,18 @@ Hooks.once("ready",()=>{
   if(game.system.id!=="dnd5e")return;
   const v=game.system.version;
   const expected=foundry.utils.isNewerVersion(v,"6.0.0")?"D&D5e 6.x":"D&D5e 5.2.x";
-  log(`v0.0.4 ready on Foundry ${game.version}, ${expected} (${v}).`);
+  log(`v${game.modules.get(ID)?.version ?? "?"} ready on Foundry ${game.version}, ${expected} (${v}).`);
   installActivityGate();
   setupRestGrants();
+  installSheetDeletionGuard();
   observeActorDirectory();
   Hooks.on("renderActorSheetV2",bindStar);
   Hooks.on("renderActorSheet",bindStar);
   Hooks.on("preUpdateItem",itemProtection);
   Hooks.on("preDeleteItem",(item,options,userId)=>{
     if(!isManaged(item))return;
-    if(!game.users.get(userId)?.isGM && get("playerProtection"))return false;
+    // Sheet Only guards the UI, not programmatic deleteEmbeddedDocuments.
+    if(!game.users.get(userId)?.isGM && get("playerProtection") && get("deletionProtection")!=="sheet")return false;
     if(game.users.get(userId)?.isGM && !get("gmDirectEdit") && !options?.himAuthorized)return false;
   });
   Hooks.on("updateItem",(item)=>{

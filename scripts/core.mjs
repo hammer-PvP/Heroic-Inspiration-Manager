@@ -1,4 +1,4 @@
-/** Heroic Inspiration Manager v0.1.0 — system-agnostic UI, D&D5e-native item uses. */
+/** Heroic Inspiration Manager v0.1.1 — system-agnostic UI, D&D5e-native item uses. */
 export const ID = "heroic-inspiration-manager";
 export const ACTIVITY_ID = "himInspireUse001";
 export const log = (...args) => console.log(`[${ID}]`, ...args);
@@ -86,7 +86,7 @@ export function registerSettings(menuApp) {
   const fields = {
     itemName: [String,"Heroic Inspiration"], icon: [String,"systems/dnd5e/ui/inspiration.webp"],
     maxMode: [String,"fixed"], maxCharges: [Number,4], cost: [Number,1], attunement: [Boolean,false],
-    recovery: [String,"none"], recoveryFormula: [String,"1d2"], playerProtection: [Boolean,true],
+    recovery: [String,"none"], recoveryFormula: [String,"1d2"], playerProtection: [Boolean,true], deletionProtection: [String,"sheet"],
     gmDirectEdit: [Boolean,true], soundEnabled: [Boolean,false], soundFile: [String,""], volume: [Number,0.7],
     fxEnabled: [Boolean,false], fxPreset: [String,""], fxSeconds: [Number,5],
     chatFlavor: [String,"A determinação desafia o destino. Uma nova chance surge quando tudo parecia perdido."],
@@ -129,7 +129,7 @@ function desiredItemData(balance=0) {
       properties:get("attunement") ? ["mgc"] : [],
       uses:{max:String(max),spent,recovery},activities:{[ACTIVITY_ID]:activitySource()},
       description:{value:`<p>${escapeHTML(tr("ItemDescription"))}</p>`}},
-    flags:{[ID]:{managed:true,version:"0.1.0"}}
+    flags:{[ID]:{managed:true,version:"0.1.1"}}
   };
 }
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.1 (2026-11-02)
+
+- Add a compact, GM-configurable **Item deletion protection** policy: **Sheet Only** (default) or **Strict** (prior behavior). The existing `playerProtection` toggle continues to control whether Player protection is enabled.
+- In Sheet Only mode, hide and intercept native D&D5e Actor/Item-sheet deletion actions and remove the managed Item's native Delete context menu option. Remove the global `preDeleteItem` veto only for Player deletion; module-driven Item reconstruction no longer encounters the HIM deletion block.
+- Preserve `preUpdateItem` charge/property safeguards, GM direct-edit policy, equipped/attuned behavior, native Activities, Manager, rest, FX and JB2A browser.
+- Explicitly document the UI-only protection trade-off: Player macros, console calls and third-party interfaces may still delete the Item. This mode is intended for trusted tables prioritizing interoperability; Strict is available for more restrictive use.
+- Fix the startup log to report the installed version instead of the former hard-coded `v0.0.4` label.
+
 ## v0.1.0 (2026-10-24)
 
 - Replace limited JB2A selects with the approved CTN-style independent effect browser: full text search, Category/Color/Shape/Variation/Distance facets (All by default), 100-per-page pagination, direct page access and private animated preview.
