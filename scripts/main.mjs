@@ -31,42 +31,74 @@ function installActivityGate(){
   clazz.prototype.use=himUse;
 }
 
-function changeKeys(changes){
-  return Object.keys(foundry.utils.flattenObject(changes)).filter(k=>k!=="_id");
+// D&D5e and other modules can send full/partially repeated Item snapshots.
+// Do not interpret unchanged values as attempted protected edits.
+function sameSourceValue(left,right){
+  if(Object.is(left,right))return true;
+  if(Array.isArray(left) || Array.isArray(right)){
+    return Array.isArray(left) && Array.isArray(right) && left.length===right.length
+      && left.every((value,index)=>sameSourceValue(value,right[index]));
+  }
+  if(left && right && typeof left==="object" && typeof right==="object"){
+    const a=Object.keys(left), b=Object.keys(right);
+    return a.length===b.length && a.every(key=>Object.prototype.hasOwnProperty.call(right,key)
+      && sameSourceValue(left[key],right[key]));
+  }
+  return false;
+}
+function changeKeys(item,changes){
+  const source=item?._source ?? item?.toObject?.() ?? {};
+  return Object.entries(foundry.utils.flattenObject(changes ?? {}))
+    .filter(([key,value])=>key!=="_id" && !sameSourceValue(foundry.utils.getProperty(source,key),value))
+    .map(([key])=>key);
+}
+function isUnrestrictedMetadata(key){
+  // Sorting and foreign-module flags are metadata, not HIM configuration.
+  // Never permit writes to HIM's own namespace through this exception.
+  return key==="sort" || (key.startsWith("flags.")
+    && key!==`flags.${ID}` && !key.startsWith(`flags.${ID}.`));
 }
 function itemProtection(item,changes,options,userId){
+  const user=game.users.get(userId);
   if(!isManaged(item)){
-    // Protection against changing attunement on *any* item during running combat (player only).
-    if(!get("attunementCombatLock") || game.users.get(userId)?.isGM)return;
-    const keys=changeKeys(changes);
+    // Preserve the configured combat attunement lock for any Item, but ignore
+    // updates which merely repeat the current value.
+    if(!get("attunementCombatLock") || user?.isGM)return;
+    const keys=changeKeys(item,changes);
     if(!keys.includes("system.attuned") && !keys.includes("system.attunement"))return;
-    const actor=item.parent;
-    if(actor && isActorInActiveCombat(actor)){
+    if(item.parent && isActorInActiveCombat(item.parent)){
       ui.notifications?.warn?.(tr("CombatAttunementBlocked"));return false;
     }
     return;
   }
-  const user=game.users.get(userId);
+  const keys=changeKeys(item,changes);
+  if(!keys.length)return;
   if(user?.isGM && (options?.himAuthorized || options?.isRest))return;
-  const keys=changeKeys(changes);
+  // Allow non-destructive bookkeeping from other modules on managed Items,
+  // including when combined with a permitted native change. Never exempt
+  // HIM's own flags, charge balance or GM-managed Item configuration.
+  const restrictedKeys=keys.filter(key=>!isUnrestrictedMetadata(key));
+  if(!restrictedKeys.length)return;
   // A legitimate native Activity must be allowed for both GM and players,
   // regardless of whether direct item editing is permitted.
-  if(activeUses.has(item.uuid) && keys.length===1 && keys[0]==="system.uses.spent"){
+  if(activeUses.has(item.uuid) && restrictedKeys.length===1 && restrictedKeys[0]==="system.uses.spent"){
     const incoming=num(foundry.utils.getProperty(changes,"system.uses.spent") ?? changes["system.uses.spent"]);
     if(incoming===num(item.system.uses.spent)+chargeCost())return;
   }
   if(user?.isGM) return get("gmDirectEdit")?undefined:false;
   if(!get("playerProtection"))return;
-  if(!keys.length)return;
+  // Players may change the current equip/attuned state, NOT whether the Item
+  // *requires* attunement (system.attunement is GM-managed configuration).
   const allowed=new Set(["system.equipped","system.attuned"]);
-  if(keys.every(k=>allowed.has(k))){
-    if(keys.some(k=>k==="system.attuned") && get("attunementCombatLock") && isActorInActiveCombat(item.parent)){
+  if(restrictedKeys.every(k=>allowed.has(k))){
+    if(restrictedKeys.includes("system.attuned") && get("attunementCombatLock") && isActorInActiveCombat(item.parent)){
       ui.notifications?.warn?.(tr("CombatAttunementBlocked"));return false;
     }
     return;
   }
-  // The D&D5e long rest pipeline passes isRest=true to embedded item updates.
-  if(options?.isRest && keys.length===1 && keys[0]==="system.uses.spent" && get("recovery")!=="none"){
+  // Keep native D&D5e recovery behavior. isRest is a workflow hint, not proof
+  // of authority, so it must never permit changes to other Item properties.
+  if(options?.isRest && restrictedKeys.length===1 && restrictedKeys[0]==="system.uses.spent" && get("recovery")!=="none"){
     const incoming=num(foundry.utils.getProperty(changes,"system.uses.spent") ?? changes["system.uses.spent"]);
     if(incoming<=num(item.system.uses.spent))return;
   }

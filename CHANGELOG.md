@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.2 (2026-11-20)
+
+- Rework README as a lasting usage and design guide (Portuguese main guide and English companion), focusing on module philosophy, the problems solved, GM/Player workflows, protection trade-offs and integration guidance. Keep release-by-release changes exclusively in CHANGELOG.
+- Reduce false-positive `preUpdateItem` blocks by ignoring incoming field values that exactly match the stored Item source. This also improves combat-attunement handling for no-op updates to non-managed Items.
+- Allow non-destructive Item bookkeeping: `sort` and external modules' flag namespaces may be updated without loosening protection of `flags.heroic-inspiration-manager`, charges or managed Item configuration.
+- Correct Player permissions for attunement: changing the current `system.attuned` state remains possible under the existing combat policy, but editing the GM-configured `system.attunement` requirement is no longer permitted.
+- Preserve Sheet Only / Strict deletion modes, GM Manager, D&D5e Item Uses, Resourceful, Token Magic FX, Sequencer/JB2A browser and multiclass FX policy.
+- Offline regression checks cover no-op updates, safe metadata, protected fields, and both deletion modes; Foundry V13/V14 and real third-party workflows still require in-world QA.
+
 ## v0.1.1 (2026-11-02)
 
 - Add a compact, GM-configurable **Item deletion protection** policy: **Sheet Only** (default) or **Strict** (prior behavior). The existing `playerProtection` toggle continues to control whether Player protection is enabled.
